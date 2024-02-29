@@ -1,0 +1,10 @@
+GAME_NAME = "Agent 57"
+TILESIZE = 16
+# W, H = 640, 360
+# W, H = 512, 288
+# W, H = 426, 240
+# W, H = 256, 144
+W, H = 144, 144
+FPS = 0
+CHUNK = 2
+# CHUNK = TILESIZE*3
