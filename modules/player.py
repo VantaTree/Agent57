@@ -30,6 +30,9 @@ class Player(pygame.sprite.Sprite):
         self.image = self.animation[0]
         self.rect = self.image.get_rect()
 
+        self.tri_vignette = pygame.image.load("graphics/tri_vignette.png").convert_alpha()
+        self.pl_vignette = pygame.image.load("graphics/player_vignette.png").convert_alpha()
+
         self.anim_index = 0
         self.anim_speed = 0.15
 
@@ -45,6 +48,9 @@ class Player(pygame.sprite.Sprite):
         self.moving = False
         self.is_dead = False
         self.flashlight = True
+
+        self.shoot_cooldown_timer = CustomTimer()
+        self.SHOOT_COOLDOWN = 1000
 
     def update_image(self):
 
@@ -100,11 +106,27 @@ class Player(pygame.sprite.Sprite):
                     # self.master.game.pause_game()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_v:
-                    self.master.debug.pl_vignette = not self.master.debug.pl_vignette
+                    self.master.debug.vignette = not self.master.debug.vignette
+                if event.key == pygame.K_SPACE and not self.shoot_cooldown_timer.running:
+                    self.spawn_bullet()
+                    self.shoot_cooldown_timer.start(self.SHOOT_COOLDOWN)
+
+        self.shoot_cooldown_timer.check()
+
+    def spawn_bullet(self):
+
+        Bullet(self.master, [self.master.level.player_bullets_grp],
+                        self.hitbox.center, self.direction)
+        # self.master.level.player_bullets_grp.add(bullet)
 
     def draw(self):
 
         self.screen.blit(self.image, self.rect.topleft + self.master.offset)
+        vignette = self.master.level.vignette
+        vignette.blit(self.pl_vignette, (vignette.get_width()//2-self.pl_vignette.get_width()//2, vignette.get_height()//2-self.pl_vignette.get_height()//2), special_flags=pygame.BLEND_RGBA_MIN)
+        if self.flashlight:
+            vignette.blit(self.tri_vignette, (vignette.get_width()//2, vignette.get_height()//2-self.tri_vignette.get_height()//2), special_flags=pygame.BLEND_RGBA_MIN)
+            self.master.level.vignette = pygame.transform.rotate(vignette, (self.direction.angle_to((1, 0))))            
         # if self.master.debug.on:
         #     pygame.draw.rect(self.screen, "blue", (self.hitbox.x+self.master.offset.x, self.hitbox.y+self.master.offset.y, self.hitbox.width, self.hitbox.height), 1)
 

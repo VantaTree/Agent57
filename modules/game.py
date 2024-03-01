@@ -41,6 +41,7 @@ class Game:
             self.pause_menu.update()
             return
 
+        self.level.vignette = self.level.orig_vignette.copy()
         self.player.update()
         self.camera.update()
         self.level.update()

@@ -20,9 +20,14 @@ class Level:
         player.rect.center = pos
         self.master.camera.snap_offset()
 
+        self.player_bullets_grp = CustomGroup()
+
         self.player = player
-        self.vignette = pygame.image.load("graphics/vignette.png").convert_alpha()
-        self.tri_vignette = pygame.image.load("graphics/tri_vignette.png").convert_alpha()
+        # self.vignette = pygame.image.load("graphics/vignette.png").convert_alpha()
+        self.orig_vignette = pygame.Surface((W*2, H*2), pygame.SRCALPHA)
+        self.orig_vignette.fill((0, 0, 0))
+        self.vignette = self.orig_vignette.copy()
+        # self.tri_vignette = pygame.image.load("graphics/tri_vignette.png").convert_alpha()
 
     def draw_bg(self):
 
@@ -39,8 +44,7 @@ class Level:
 
     def draw_fg(self):
 
-        direc:pygame.Vector2 = self.player.direction
-        vignette = self.vignette.copy()
+        # vignette = self.vignette.copy()
         # pygame.draw.polygon(vignette, 0x00000000, (
         #     (vignette.get_width()/2, vignette.get_height()/2),
         #     direc.rotate(-30)*(W+H)/3 + (vignette.get_width()/2, vignette.get_height()/2),
@@ -51,16 +55,18 @@ class Level:
         #     direc.rotate(-30)*(W+H)/3 + (vignette.get_width()/2, vignette.get_height()/2),
         #     direc.rotate(30)*(W+H)/3 + (vignette.get_width()/2, vignette.get_height()/2),
         # ))
-        if self.master.debug.pl_vignette:
-            if self.player.flashlight:
-                vignette.blit(self.tri_vignette, (vignette.get_width()//2, vignette.get_height()//2-self.tri_vignette.get_height()//2), special_flags=pygame.BLEND_RGBA_MIN)
-            vignette = pygame.transform.rotate(vignette, (direc.angle_to((1, 0))))            
-            self.screen.blit(vignette, (self.player.hitbox.center + self.master.offset - (vignette.get_width()/2, vignette.get_height()/2)))
+        self.player_bullets_grp.draw()
+        if self.master.debug.vignette:
+            self.screen.blit(self.vignette, (self.player.hitbox.center + self.master.offset - (self.vignette.get_width()/2, self.vignette.get_height()/2)))
+            # if self.player.flashlight:
+            #     vignette.blit(self.tri_vignette, (vignette.get_width()//2, vignette.get_height()//2-self.tri_vignette.get_height()//2), special_flags=pygame.BLEND_RGBA_MIN)
+            # vignette = pygame.transform.rotate(vignette, (direc.angle_to((1, 0))))            
+            # self.screen.blit(vignette, (self.player.hitbox.center + self.master.offset - (vignette.get_width()/2, vignette.get_height()/2)))
 
 
     def update(self):
 
-        pass
+        self.player_bullets_grp.update()
 
 
 class Node:
