@@ -1,6 +1,7 @@
 import pygame
 from .engine import *
 from .config import *
+from .enemies import Enemy
 from math import sin, pi
 from random import randint, choice, random
 
@@ -21,6 +22,7 @@ class Level:
         self.master.camera.snap_offset()
 
         self.player_bullets_grp = CustomGroup()
+        self.enemy_grp = CustomGroup()
 
         self.player = player
         # self.vignette = pygame.image.load("graphics/vignette.png").convert_alpha()
@@ -28,6 +30,11 @@ class Level:
         self.orig_vignette.fill((0, 0, 0))
         self.vignette = self.orig_vignette.copy()
         # self.tri_vignette = pygame.image.load("graphics/tri_vignette.png").convert_alpha()
+
+        Enemy(master, [self.enemy_grp], self, None, self.player.rect.center,
+              self.player.hitbox.copy(), self.player.hitbox.copy(), 5, 0.9, 0.1, 0.1,
+              ambience_dist=(16*16), calm_dist=(28*16), follow_dist=(4*16), attack_dist=(1.5*16))
+
 
     def draw_bg(self):
 
@@ -55,6 +62,7 @@ class Level:
         #     direc.rotate(-30)*(W+H)/3 + (vignette.get_width()/2, vignette.get_height()/2),
         #     direc.rotate(30)*(W+H)/3 + (vignette.get_width()/2, vignette.get_height()/2),
         # ))
+        self.enemy_grp.draw()
         self.player_bullets_grp.draw()
         if self.master.debug.vignette:
             self.screen.blit(self.vignette, (self.player.hitbox.center + self.master.offset - (self.vignette.get_width()/2, self.vignette.get_height()/2)))
@@ -67,6 +75,7 @@ class Level:
     def update(self):
 
         self.player_bullets_grp.update()
+        self.enemy_grp.update()
 
 
 class Node:
