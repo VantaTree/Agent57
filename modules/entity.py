@@ -14,7 +14,7 @@ class Bullet(pygame.sprite.Sprite):
         self.orig_image = pygame.image.load("graphics/test_bullet.png").convert_alpha()
         self.image = self.orig_image
         # self.bullet_vignette = pygame.image.load("graphics/bullet_vignette.png").convert_alpha()
-        self.bullet_vignette = pygame.image.load("graphics/vignette_torch.png").convert_alpha()
+        self.bullet_vignette = pygame.image.load("graphics/vignette_bullet.png").convert_alpha()
         self.rect = self.image.get_rect(center=pos)
         self.hitbox = pygame.FRect(0, 0, 6, 6)
         self.hitbox.center = pos
@@ -44,12 +44,11 @@ class Bullet(pygame.sprite.Sprite):
     def draw(self):
         
         self.screen.blit(self.image, self.rect.topleft+self.master.offset)
-        vignette = self.master.level.vignette
-        b_w, b_h = self.bullet_vignette.get_size()
-        pos = self.rect.center + self.master.offset + \
-            (vignette.get_width()/2-W/2-b_w/2, vignette.get_height()/2-H/2-b_h/2) + self.master.player.direction*TILESIZE
-        vignette.blit(self.bullet_vignette, pos, special_flags=pygame.BLEND_RGBA_MIN)
 
+        if self.master.debug.vignette:
+            vignette = self.master.level.vignette
+            pos = self.rect.center+self.master.offset-(self.bullet_vignette.get_width()/2, self.bullet_vignette.get_height()/2) + (W/2, H/2)
+            vignette.blit(self.bullet_vignette, pos, special_flags=pygame.BLEND_RGBA_MIN)
 
 
 def is_colliding(entity, master, obj_rects=None):

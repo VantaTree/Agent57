@@ -14,7 +14,7 @@ class Debug:
         else: self.font = font
         self.surf_enabled = surf_enabled
         self.on = True
-        self.vignette = True
+        self.vignette = False
 
     def __call__(self, name, value):
         

@@ -122,11 +122,23 @@ class Player(pygame.sprite.Sprite):
     def draw(self):
 
         self.screen.blit(self.image, self.rect.topleft + self.master.offset)
-        vignette = self.master.level.vignette
-        vignette.blit(self.pl_vignette, (vignette.get_width()//2-self.pl_vignette.get_width()//2, vignette.get_height()//2-self.pl_vignette.get_height()//2), special_flags=pygame.BLEND_RGBA_MIN)
-        if self.flashlight:
-            vignette.blit(self.tri_vignette, (vignette.get_width()//2, vignette.get_height()//2-self.tri_vignette.get_height()//2), special_flags=pygame.BLEND_RGBA_MIN)
-            self.master.level.vignette = pygame.transform.rotate(vignette, (self.direction.angle_to((1, 0))))            
+
+        if self.master.debug.vignette:
+            vignette = self.master.level.vignette
+            vignette.blit(self.pl_vignette, self.rect.center+self.master.offset-\
+                          (self.pl_vignette.get_width()/2, self.pl_vignette.get_height()/2)+(W/2, H/2),
+                          special_flags=pygame.BLEND_RGBA_MIN)
+            if self.flashlight:
+                radius = self.tri_vignette.get_width()/2
+                tri_vignette = pygame.transform.rotate(self.tri_vignette, (self.direction.angle_to((1, 0))))
+                # bg_tri_vignette = pygame.Surface(tri_vignette.get_size(), pygame.SRCALPHA)
+                # bg_tri_vignette.fill((0, 0, 0, 255))
+                # bg_tri_vignette.blit(tri_vignette, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+                rect = tri_vignette.get_rect(center = self.rect.center+self.master.offset)
+                vignette.blit(tri_vignette, rect.topleft + self.direction*radius + (W/2, H/2),
+                              special_flags=pygame.BLEND_RGBA_MIN)
+
+
         # if self.master.debug.on:
         #     pygame.draw.rect(self.screen, "blue", (self.hitbox.x+self.master.offset.x, self.hitbox.y+self.master.offset.y, self.hitbox.width, self.hitbox.height), 1)
 
