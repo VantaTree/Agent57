@@ -60,16 +60,16 @@ class MainMenu():
         self.master.main_menu = self
         self.screen = pygame.display.get_surface()
         self.x_shift = 0
-        self.title_surf = self.master.font_big.render(GAME_NAME, False, (235, 192, 72))
+        self.title_surf = self.master.font_big.render(GAME_NAME, False, (235, 10, 5))
         self.title_rect = self.title_surf.get_rect(midtop=(W/2, 40))
-        self.title_shadow = self.master.font_big.render(GAME_NAME, False, (255, 212, 92))
+        self.title_shadow = self.master.font_big.render(GAME_NAME, False, (255, 20, 25))
         self.title_shadow.set_alpha(100)
         self.buttons:list[Button] = []
         self.create_buttons()
         
     def create_buttons(self):
 
-        col = (252, 205, 146)
+        col = (185, 198, 194)
         Button(self.master, (W//2, H*0.5), 'start', self.buttons, col)
         Button(self.master, (W//2, H*0.6), 'fullscreen', self.buttons, col)
         Button(self.master, (W//2, H*0.7), 'quit', self.buttons, col)
@@ -86,7 +86,8 @@ class MainMenu():
                     if action == 'start':
                         # self.master.music.change_track("in_game")
                         # self.master.sounds["UI_Select"].play()
-                        self.master.app.state = self.master.app.INTRO_CUTSCENE
+                        # self.master.app.state = self.master.app.INTRO_CUTSCENE
+                        self.master.app.state = self.master.app.IN_GAME
                     elif action == 'fullscreen':
                         pygame.display.toggle_fullscreen()
                     elif action == 'quit':
@@ -97,7 +98,7 @@ class MainMenu():
 
     def draw(self):
 
-        self.screen.fill(0x4C0805)
+        self.screen.fill(0)
 
         self.screen.blit(self.title_shadow, (self.title_rect.x-2, self.title_rect.y+2))
         self.screen.blit(self.title_surf, self.title_rect)
@@ -118,10 +119,8 @@ class PauseMenu():
         self.master.pause_menu = self
 
         self.screen = pygame.display.get_surface()
-        # self.bg = self.screen.copy()
         self.bg_overlay = pygame.Surface(self.screen.get_size())
-        # self.bg_overlay.fill(0xb5737c)
-        self.bg_overlay.set_alpha(150)
+        self.bg_overlay.set_alpha(70)
 
         self.buttons:list[Button] = []
         self.create_buttons()

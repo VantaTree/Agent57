@@ -41,7 +41,7 @@ class App:
         pygame.event.set_allowed((pygame.QUIT, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONDOWN,
                                     pygame.KEYDOWN))
 
-        self.state = self.IN_GAME
+        self.state = self.MAIN_MENU
 
         self.master = Master()
         # SoundSet(self.master)
@@ -49,7 +49,7 @@ class App:
         self.debug = Debug(self.screen, font=self.master.font_d, offset=4)
         self.master.debug = self.debug
         self.game = Game(self.master)
-        # self.main_menu = MainMenu(self.master)
+        self.main_menu = MainMenu(self.master)
         Music(self.master)
 
     async def run(self):

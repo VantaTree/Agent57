@@ -103,17 +103,19 @@ class Player(pygame.sprite.Sprite):
 
         for event in pygame.event.get((pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN)):
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 3:
-                    self.flashlight = not self.flashlight
-            if event.type == pygame.MOUSEBUTTONUP:
-                pass
-                    # self.master.game.pause_game()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_v:
-                    self.master.debug.vignette = not self.master.debug.vignette
-                if event.key == pygame.K_SPACE and not self.shoot_cooldown_timer.running:
+                if event.button == 3 and not self.shoot_cooldown_timer.running:
                     self.spawn_bullet()
                     self.shoot_cooldown_timer.start(self.SHOOT_COOLDOWN)
+                    
+            if event.type == pygame.MOUSEBUTTONUP:
+                pass
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    self.master.game.pause_game()
+                if event.key == pygame.K_v:
+                    self.master.debug.vignette = not self.master.debug.vignette
+                if event.key == pygame.K_SPACE:
+                    self.flashlight = not self.flashlight
 
         self.shoot_cooldown_timer.check()
 

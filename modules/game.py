@@ -18,7 +18,6 @@ class Game:
 
         self.master.offset = pygame.Vector2(0, 0)
 
-        self.which_pilot = 1 # 1234
         self.pause_menu = PauseMenu(master)
 
         self.player = Player(master, [])
