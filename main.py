@@ -31,6 +31,7 @@ class App:
 
     GAME_WIN = 7
     GAME_LOOSE = 8
+    THE_END = 10
 
     def __init__(self):
         
@@ -82,11 +83,31 @@ class App:
         
         if self.state == self.MAIN_MENU:
             self.main_menu.run()
-        elif self.state == self.INTRO_CUTSCENE:
+        elif self.state in (self.INTRO_CUTSCENE, self.GAME_WIN, self.TRANSITION):
             self.cutscene.run()
-                # self.state = self.IN_GAME
+        elif self.state == self.GAME_LOOSE:
+            if self.cutscene.run():
+                self.game.restart_level()
         elif self.state == self.IN_GAME:
             self.game.run()
+        elif self.state == self.THE_END:
+            self.screen.fill("gold")
+            pass
+
+    def death_screen(self):
+
+        self.state = self.GAME_LOOSE
+        self.cutscene = FiFo(self.master, "you_died", self.IN_GAME)
+
+    def next_level(self, level):
+        self.state = self.TRANSITION
+        self.cutscene = FiFo(self.master, F"level_{level}", self.IN_GAME)
+
+    def finish_game(self):
+
+        self.state = self.GAME_WIN
+        self.cutscene = FiFo(self.master, "end won", self.THE_END)
+
 
 if __name__ == "__main__":
 

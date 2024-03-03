@@ -25,7 +25,9 @@ class Game:
         self.camera.set_target(self.player, lambda p: p.rect.center + p.direction*TILESIZE)
         self.camera.snap_offset()
 
-        self.level = Level(master, self.player, "test_level")
+        self.levels = ["test_level", "level_1", "level_0"]
+        self.curr_level = 0
+        self.level = Level(master, self.player, self.levels[self.curr_level])
         # self.level = Level(master, self.player, "level_1")
         # self.level = Level(master, self.player, "level_0")
 
@@ -35,6 +37,25 @@ class Game:
         if not self.paused:
             self.paused = True
             self.pause_menu.open()
+
+    def next_level(self):
+        self.curr_level += 1
+        if self.curr_level >= len(self.levels):
+            self.master.app.finish_game()
+            return
+        self.master.app.next_level(self.curr_level)
+        self.restart_level()
+
+    def restart_level(self):
+
+        self.level = Level(self.master, self.player, self.levels[self.curr_level])
+        self.player.velocity.update()
+        self.player.dying = False
+        self.player.is_dead = False
+        self.player.moving = False
+        self.player.in_control = True
+        self.player.in_disgiuse = False
+        self.player.bullets = self.player.max_bullets
 
     def run(self):
 

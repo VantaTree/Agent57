@@ -61,7 +61,7 @@ class MainMenu():
         self.screen = pygame.display.get_surface()
         self.x_shift = 0
         self.title_surf = self.master.font_big.render(GAME_NAME, False, (235, 10, 5))
-        self.title_rect = self.title_surf.get_rect(midtop=(W/2, 40))
+        self.title_rect = self.title_surf.get_rect(midtop=(W/2, 30))
         self.title_shadow = self.master.font_big.render(GAME_NAME, False, (255, 20, 25))
         self.title_shadow.set_alpha(100)
         self.buttons:list[Button] = []
@@ -70,9 +70,9 @@ class MainMenu():
     def create_buttons(self):
 
         col = (185, 198, 194)
-        Button(self.master, (W//2, H*0.5), 'start', self.buttons, col)
+        Button(self.master, (W//2, H*0.45), 'start', self.buttons, col)
         Button(self.master, (W//2, H*0.6), 'fullscreen', self.buttons, col)
-        Button(self.master, (W//2, H*0.7), 'quit', self.buttons, col)
+        Button(self.master, (W//2, H*0.75), 'quit', self.buttons, col)
 
     def update(self):
 
@@ -126,9 +126,10 @@ class PauseMenu():
         
     def create_buttons(self):
 
-        Button(self.master, (W//2, H*0.4), 'resume', self.buttons)
-        Button(self.master, (W//2, H*0.5), 'fullscreen', self.buttons)
-        Button(self.master, (W//2, H*0.6), 'quit', self.buttons)
+        Button(self.master, (W//2, H*0.3), 'resume', self.buttons)
+        Button(self.master, (W//2, H*0.45), 'fullscreen', self.buttons)
+        Button(self.master, (W//2, H*0.6), 'restart level', self.buttons)
+        Button(self.master, (W//2, H*0.75), 'quit', self.buttons)
 
     def open(self):
         self.bg = pygame.transform.gaussian_blur(self.screen, 5, False)
@@ -149,6 +150,10 @@ class PauseMenu():
                         # self.master.sounds["UI_Return"].play()
                     elif action == 'fullscreen':
                         pygame.display.toggle_fullscreen()
+                    elif action == 'restart level':
+                        # self.master.app.death_screen()
+                        self.master.game.paused = False
+                        self.master.player.get_hurt()
                     elif action == 'quit':
                         pygame.quit()
                         raise SystemExit

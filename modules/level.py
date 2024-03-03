@@ -27,10 +27,10 @@ class Level:
         self.get_collision_data()
         self.get_tile_layers()
         
-        self.player_pos = json.loads(self.data.properties["player_start_pos"])
-        self.player_pos = self.player_pos[0]*TILESIZE +TILESIZE//2, self.player_pos[1]*TILESIZE +TILESIZE//2
-        player.hitbox.center = self.player_pos
-        player.rect.center = self.player_pos
+        self.start_pos = json.loads(self.data.properties["player_start_pos"])
+        self.start_pos = self.start_pos[0]*TILESIZE +TILESIZE//2, self.start_pos[1]*TILESIZE +TILESIZE//2
+        player.hitbox.center = self.start_pos
+        player.rect.center = self.start_pos
         self.master.camera.snap_offset()
 
         self.player_bullets_grp = CustomGroup()
@@ -67,6 +67,8 @@ class Level:
         self.guard_walk_positions = list(self.data.get_layer_by_name("guard_walk_positions"))
         total_guards = self.data.properties["guard_fishes"]
         total_fishes = self.data.properties["normal_fishes"] # excluding target fish
+        self.player.max_bullets = int(total_fishes*0.85) + total_guards
+        self.player.bullets = self.player.max_bullets
         for _ in range(total_guards):
             point = choice(self.guard_walk_positions)
             pos = point.x//TILESIZE *TILESIZE + TILESIZE//2, point.y//TILESIZE *TILESIZE + TILESIZE//2
@@ -136,9 +138,11 @@ class Level:
         #     direc.rotate(30)*(W+H)/3 + (vignette.get_width()/2, vignette.get_height()/2),
         # ))
         
-        if self.master.debug.vignette:
+        self.player.draw_ui()
+        if self.player.dying:
             self.screen.blit(self.vignette, (-W/2, -H/2))
-            # self.screen.blit(self.vignette, (0, 0))
+        # if self.master.debug.vignette:
+        #     self.screen.blit(self.vignette, (-W/2, -H/2))
 
 
     def update(self):

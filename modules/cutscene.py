@@ -14,6 +14,12 @@ CUTSCENE_TEXT = {
         "Bad Boy,\nNow we have no food",
     ],
     "transition":[], # supposed to be empty
+    "level_1":[
+        "Level 1"
+    ],
+    "level_2":[
+        "level 2 :)"
+    ],
     "you_died":[
         "You Died!"
     ],
