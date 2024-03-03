@@ -1,7 +1,7 @@
 import pygame
 from .engine import *
 from .config import *
-from .enemies import Enemy, load_enemy_sprites
+from .enemies import Guard, Fish, load_enemy_sprites
 from pytmx.util_pygame import load_pygame
 import json
 from math import sin, pi
@@ -16,18 +16,17 @@ class Level:
 
         self.master = master
         master.level = self
+        self.player = player
         self.screen = pygame.display.get_surface()
 
-        # self.collision = collision
         self.name = map_type
         self.data = load_pygame(F"data/{map_type}.tmx")
         self.size = self.data.width, self.data.height
 
-        # self.collision = generate_map()
-        # self.size = len(self.collision[0]), len(self.collision)
         self.size = self.data.width, self.data.height
         self.get_collision_data()
         self.get_tile_layers()
+        
         self.player_pos = json.loads(self.data.properties["player_start_pos"])
         self.player_pos = self.player_pos[0]*TILESIZE +TILESIZE//2, self.player_pos[1]*TILESIZE +TILESIZE//2
         player.hitbox.center = self.player_pos
@@ -36,19 +35,12 @@ class Level:
 
         self.player_bullets_grp = CustomGroup()
         self.enemy_grp = CustomGroup()
+        self.init_objects()
 
-        self.player = player
         self.orig_vignette = pygame.Surface((W*2, H*2), pygame.SRCALPHA)
         # self.orig_vignette = pygame.Surface((W, H), pygame.SRCALPHA)
         self.orig_vignette.fill((0, 0, 0))
         self.vignette = self.orig_vignette.copy()
-
-        Enemy(master, [self.enemy_grp], self, "fish1", self.player.rect.center,
-              self.player.hitbox.copy(), self.player.hitbox.copy(), 5, 1, 0.1, 0.1,
-              ambience_dist=(16*16), calm_dist=(28*16), follow_dist=(6*16), attack_dist=(1.5*16))
-        Enemy(master, [self.enemy_grp], self, "guard", (self.player.rect.centerx+8, self.player.rect.centery+12),
-              pygame.FRect(0, 0, 26, 26), pygame.FRect(0, 0, 32, 32), 5, 0.8, 0.1, 0.1,
-              ambience_dist=(16*16), calm_dist=(28*16), follow_dist=(6*16), attack_dist=(1.5*16))
 
     def get_collision_data(self):
         
@@ -67,7 +59,26 @@ class Level:
 
     def get_tile_layers(self):
 
-        self.tile_map_layers = [self.data.get_layer_by_name("main")]
+        self.tile_map_layers = [self.data.get_layer_by_name("main"), self.data.get_layer_by_name("over")]
+
+    def init_objects(self):
+
+        self.walk_positions = list(self.data.get_layer_by_name("walk_positions"))
+        self.guard_walk_positions = list(self.data.get_layer_by_name("guard_walk_positions"))
+        total_guards = self.data.properties["guard_fishes"]
+        total_fishes = self.data.properties["normal_fishes"] # excluding target fish
+        for _ in range(total_guards):
+            point = choice(self.guard_walk_positions)
+            pos = point.x//TILESIZE *TILESIZE + TILESIZE//2, point.y//TILESIZE *TILESIZE + TILESIZE//2
+            Guard(self.master, [self.enemy_grp], self, "guard", (pos))
+        for _ in range(total_fishes):
+            point = choice(self.walk_positions)
+            pos = point.x//TILESIZE *TILESIZE + TILESIZE//2, point.y//TILESIZE *TILESIZE + TILESIZE//2
+            Fish(self.master, [self.enemy_grp], self, "fish1", (pos))
+        
+        point = choice(self.walk_positions)
+        pos = point.x//TILESIZE *TILESIZE + TILESIZE//2, point.y//TILESIZE *TILESIZE + TILESIZE//2
+        Fish(self.master, [self.enemy_grp], self, "target_fish", (pos))
 
     def draw_bg(self):
 

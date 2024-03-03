@@ -11,20 +11,20 @@ def load_enemy_sprites():
 
     global ENEMY_SPRITES
 
-    for folder in ("guard", "fish1"):
+    for folder in ("guard", "fish1", "target_fish"):
         ENEMY_SPRITES[folder] = import_sprite_sheets(F"graphics/enemies/{folder}")
 
 
 IDLE = 0
-AGRO = 1
+PATH = 1
 FOLLOW = 2
 ATTACK = 3
 ANGRY = 4
-DYING = 5
+DEAD = 5
 
 class Enemy(pygame.sprite.Sprite):
 
-    def __init__(self, master, grps, level, sprite_type, pos, hitbox, attack_rect, max_health, max_speed, acc, dcc, **kwargs):
+    def __init__(self, master, grps, level, sprite_type, pos, hitbox, attack_rect, max_health, max_speed, acc, dcc):
 
         super().__init__(grps)
         self.master = master
@@ -52,28 +52,23 @@ class Enemy(pygame.sprite.Sprite):
         self.deceleration = dcc
         self.direction = pygame.Vector2(choice((1, -1)), 0)
 
+
         self.state = IDLE
         self.moving = False
         self.max_health = max_health
         self.health = self.max_health
         self.invinsible = False
         self.hurting = False
-
-        self.ambience_dist = kwargs.get("ambience_dist") # makes creature noises within this distance
-        self.calm_dist = kwargs.get("calm_dist") # clams the creature after this distance
-        self.follow_dist = kwargs.get("follow_dist") # follows within this distance
-        self.attack_dist = kwargs.get("attack_dist") # initiates an attack in this distance
+        self.dead = False
 
         self.invinsibility_timer = CustomTimer()
         self.hurt_for = CustomTimer()
 
     def update_image(self):
 
-        # if self.state == DYING: state = "dead"
-        # elif self.moving: state = "run"
+        if self.state == DEAD: state = "dead"
+        else: state = "swim"
         # elif self.state == ATTACK: state = "attack"
-        # else: state = "idle"
-        state = "swim"
 
         try:
             image = self.animations[state][int(self.anim_index)]
@@ -82,12 +77,12 @@ class Enemy(pygame.sprite.Sprite):
             self.anim_index = 0
             if self.state == ATTACK:
                 self.state = FOLLOW
-            elif self.state == DYING:
-                self.die()
-                return
+            # elif self.state == DEAD:
+            #     self.die()
+            #     return
 
         if self.moving: self.anim_speed = 0.15
-        elif self.state == ATTACK: self.anim_speed = 0.18
+        elif self.state == DEAD: self.anim_speed = 0.01
         # else: self.anim_speed = 0.08
         else: self.anim_speed = 0
 
@@ -143,7 +138,78 @@ class Enemy(pygame.sprite.Sprite):
 
     def process_events(self):
 
-        if self.state == DYING: return
+        pass
+
+    def check_player_collision(self):
+
+        pass
+        # if self.hitbox.colliderect(self.master.player.hitbox):
+        #     self.master.player.get_hurt(1)
+    
+    def get_picked_up(self):
+
+        if self.state != DEAD or self.sprite_type != "target_fish": return False
+        self.kill()
+        return True
+
+    def get_hurt(self, damage):
+
+        if self.invinsible or self.state == DEAD: return False
+        if self.state in (IDLE,):
+            self.state = ANGRY
+        elif self.state != ANGRY: self.state = FOLLOW
+        self.health -= damage
+        self.velocity.update()
+        self.moving = False
+        self.hurting = True
+        self.invinsible = True
+        self.hurt_for.start(200)
+        self.invinsibility_timer.start(1_000)
+
+        if self.health <= 0:
+            self.state = DEAD
+            self.dead = True
+            self.anim_index = 0
+        return True
+    
+    def die(self):
+
+        pass
+
+    def draw(self):
+
+        self.screen.blit(self.image, self.rect.topleft + self.master.offset)
+        # pygame.draw.rect(self.screen, "blue", (self.hitbox.x+self.master.offset.x, self.hitbox.y+self.master.offset.y, self.hitbox.width, self.hitbox.height), 1)
+        # pygame.draw.rect(self.screen, "red", (self.attack_rect.x+self.master.offset.x, self.attack_rect.y+self.master.offset.y, self.attack_rect.width, self.attack_rect.height), 1)
+
+    def update(self):
+
+        if self.state != DEAD:
+            self.process_events()
+        self.check_timers()
+        if self.state != DEAD:
+            self.control()
+            self.apply_force()
+            self.move()
+            self.check_player_collision()
+        self.update_image()
+
+
+class Guard(Enemy):
+
+    def __init__(self, master, grps, level, sprite_type, pos):
+
+        super().__init__(master, grps, level, sprite_type, pos,
+                         (0, 0, 16, 16), (0, 0, 32, 32), 2, 0.8, 0.1, 0.1)
+        
+        self.ambience_dist = 16*TILESIZE # makes creature noises within this distance
+        self.calm_dist = 28*TILESIZE # clams the creature after this distance
+        self.follow_dist = 6*TILESIZE # follows within this distance
+        self.attack_dist = 1.5*TILESIZE # initiates an attack in this distance
+        
+    def process_events(self):
+
+        if self.state == DEAD: return
         dist = dist_sq(self.master.player.rect.center, self.rect.center)
         if dist < self.attack_dist**2 and self.state == ANGRY:
             self.state = FOLLOW
@@ -169,44 +235,11 @@ class Enemy(pygame.sprite.Sprite):
             try:
                 self.direction.normalize_ip()
             except ValueError: pass
+        
 
-    def check_player_collision(self):
+class Fish(Enemy):
 
-        pass
-        # if self.hitbox.colliderect(self.master.player.hitbox):
-        #     self.master.player.get_hurt(1)
+    def __init__(self, master, grps, level, sprite_type, pos):
 
-    def get_hurt(self, damage):
-
-        if self.invinsible or self.state == DYING: return False
-        if self.state in (IDLE, AGRO):
-            self.state = ANGRY
-        elif self.state != ANGRY: self.state = FOLLOW
-        self.health -= damage
-        self.velocity.update()
-        self.moving = False
-        self.hurting = True
-        self.invinsible = True
-        self.hurt_for.start(200)
-        self.invinsibility_timer.start(1_000)
-
-        if self.health <= 0:
-            self.state = DYING
-            self.anim_index = 0
-        return True
-
-    def draw(self):
-
-        self.screen.blit(self.image, self.rect.topleft + self.master.offset)
-        # pygame.draw.rect(self.screen, "blue", (self.hitbox.x+self.master.offset.x, self.hitbox.y+self.master.offset.y, self.hitbox.width, self.hitbox.height), 1)
-        # pygame.draw.rect(self.screen, "red", (self.attack_rect.x+self.master.offset.x, self.attack_rect.y+self.master.offset.y, self.attack_rect.width, self.attack_rect.height), 1)
-
-    def update(self):
-
-        self.process_events()
-        self.check_timers()
-        self.control()
-        self.apply_force()
-        self.move()
-        self.check_player_collision()
-        self.update_image()
+        super().__init__(master, grps, level, sprite_type, pos,
+                         (0, 0, 16, 16), (0, 0, 16, 16), 1, 1, 0.1, 0.1)

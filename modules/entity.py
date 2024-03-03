@@ -11,7 +11,7 @@ class Bullet(pygame.sprite.Sprite):
         self.master = master
         self.screen = pygame.display.get_surface()
 
-        self.orig_image = pygame.image.load("graphics/test_bullet.png").convert_alpha()
+        self.orig_image = pygame.image.load("graphics/bullet.png").convert_alpha()
         self.image = self.orig_image
         # self.bullet_vignette = pygame.image.load("graphics/bullet_vignette.png").convert_alpha()
         self.bullet_vignette = pygame.image.load("graphics/vignette_bullet.png").convert_alpha()
@@ -36,9 +36,19 @@ class Bullet(pygame.sprite.Sprite):
         if is_colliding(self, self.master):
             self.kill()
 
+    def check_hit(self):
+
+        for sprite in self.master.level.enemy_grp.sprites():
+            if self.hitbox.colliderect(sprite.rect):
+                if sprite.dead: continue
+                sprite.get_hurt(1)
+                self.kill()
+                break
+
     def update(self):
 
         self.move()
+        self.check_hit()
         self.update_image()
 
     def draw(self):

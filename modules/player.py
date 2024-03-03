@@ -38,6 +38,7 @@ class Player(pygame.sprite.Sprite):
         # self.rect.center = pos
         self.velocity = pygame.Vector2()
         self.max_speed = 1.3
+        self.disgiuse_speed = 0.8
         self.acceleration = 0.15
         self.deceleration = 0.3
         self.direction = pygame.Vector2(0, 1)
@@ -45,6 +46,7 @@ class Player(pygame.sprite.Sprite):
         self.moving = False
         self.is_dead = False
         self.flashlight = True
+        self.in_disgiuse = False
 
         self.shoot_cooldown_timer = CustomTimer()
         self.SHOOT_COOLDOWN = 1000
@@ -52,7 +54,8 @@ class Player(pygame.sprite.Sprite):
     def update_image(self):
 
         # if self.moving: state = "swim"
-        state = "swim"
+        if self.in_disgiuse: state = "cover_t_swim"
+        else: state = "swim"
 
         try:
             self.image = self.animations[state][int(self.anim_index)]
@@ -87,7 +90,8 @@ class Player(pygame.sprite.Sprite):
 
 
         if self.moving:
-            self.velocity.move_towards_ip( self.direction*self.max_speed, self.acceleration *self.master.dt)
+            speed = self.disgiuse_speed if self.in_disgiuse else self.max_speed
+            self.velocity.move_towards_ip( self.direction*speed, self.acceleration *self.master.dt)
         else:
             self.velocity.move_towards_ip( (0, 0), self.deceleration *self.master.dt)
 
@@ -115,6 +119,8 @@ class Player(pygame.sprite.Sprite):
                 if event.key == pygame.K_v:
                     self.master.debug.vignette = not self.master.debug.vignette
                 if event.key == pygame.K_SPACE:
+                    self.check_on_disguise()
+                if event.key == pygame.K_x:
                     self.flashlight = not self.flashlight
 
         self.shoot_cooldown_timer.check()
@@ -125,6 +131,15 @@ class Player(pygame.sprite.Sprite):
         direc.from_polar((1, -round(self.direction.angle_to((1, 0))/15)*15))
         Bullet(self.master, [self.master.level.player_bullets_grp],
                         self.hitbox.center, direc)
+        
+    def check_on_disguise(self):
+
+        for enemy in self.master.level.enemy_grp.sprites():
+            if not self.rect.colliderect(enemy.rect): continue
+            if not enemy.dead: continue
+            if enemy.get_picked_up():
+                self.in_disgiuse = True
+        # self.in_disgiuse = not self.in_disgiuse
 
     def draw(self):
 
