@@ -4,6 +4,8 @@ from .config import *
 from .enemies import Guard, Fish, load_enemy_sprites
 from pytmx.util_pygame import load_pygame
 import json
+from copy import deepcopy
+from pathfinding.core.grid import Grid as PathGrid
 from math import sin, pi
 from random import randint, choice, random
 
@@ -51,11 +53,15 @@ class Level:
             #     self.object_firstgid = tileset.firstgid
 
         self.collision = self.data.get_layer_by_name("collision").data
+        self.pathfinding_grid = [[0]*(self.size[0]//2) for _ in range(self.size[1]//2)]
         
         for y, row in enumerate(self.collision):
             for x, gid in enumerate(row):
 
-                self.collision[y][x] = self.data.tiledgidmap[gid] - collision_firstgid
+                cell = self.data.tiledgidmap[gid] - collision_firstgid
+                self.collision[y][x] = cell
+                self.pathfinding_grid[y//2][x//2] = 1 if cell == 0 else 0
+        self.pathfinding_grid = PathGrid(matrix=self.pathfinding_grid)
 
     def get_tile_layers(self):
 

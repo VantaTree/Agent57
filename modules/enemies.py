@@ -1,9 +1,11 @@
 import pygame
 from .config import *
 from .engine import *
+from .entity import *
 from random import randint, choice
 from math import sin
-from .entity import *
+from pathfinding.finder.a_star import AStarFinder
+from pathfinding.core.diagonal_movement import DiagonalMovement
 
 ENEMY_SPRITES = {}
 
@@ -53,13 +55,16 @@ class Enemy(pygame.sprite.Sprite):
         self.direction = pygame.Vector2(choice((1, -1)), 0)
 
 
-        self.state = IDLE
+        self.state = PATH
         self.moving = False
         self.max_health = max_health
         self.health = self.max_health
         self.invinsible = False
         self.hurting = False
         self.dead = False
+
+        self.path_cells = []
+        self.path_cell_index = 0
 
         self.invinsibility_timer = CustomTimer()
         self.hurt_for = CustomTimer()
@@ -108,7 +113,7 @@ class Enemy(pygame.sprite.Sprite):
 
         if self.moving:
             for enemy in self.level.enemy_grp.sprites():
-                if enemy is self: continue
+                if enemy is self or enemy.dead: continue
                 if self.rect.colliderect(enemy.rect):
                     try:
                         space_vec = pygame.Vector2(self.rect.centerx-enemy.rect.centerx, self.rect.centery-enemy.rect.centery)
@@ -136,6 +141,35 @@ class Enemy(pygame.sprite.Sprite):
         do_collision(self, 1, self.master)
         do_collision(self, 2, self.master)
 
+    def follow_path(self):
+
+        if self.state != PATH: return
+        try:
+            t_cell_x, t_cell_y = self.path_cells[self.path_cell_index]
+        except IndexError:
+            self.path_cell_index = 0
+            
+            # generate_new_path
+            points_list = self.level.guard_walk_positions if self.sprite_type == "guard" else self.level.walk_positions
+            point = choice(points_list)
+            start = self.level.pathfinding_grid.node(self.rect.x//(TILESIZE*2), self.rect.y//(TILESIZE*2))
+            end = self.level.pathfinding_grid.node(int(point.x//(TILESIZE*2)), int(point.y//(TILESIZE*2)))
+            finder = AStarFinder(diagonal_movement=DiagonalMovement.only_when_no_obstacle)
+            self.path_cells, _runs = finder.find_path(start, end, self.level.pathfinding_grid)
+            self.level.pathfinding_grid.cleanup()
+
+            t_cell_x, t_cell_y = self.path_cells[self.path_cell_index]
+
+        # t_pos_x, t_pos_y = t_cell_x*TILESIZE+TILESIZE//2 , t_cell_y*TILESIZE+TILESIZE//2
+        t_pos_x, t_pos_y = t_cell_x*TILESIZE*2+TILESIZE , t_cell_y*TILESIZE*2+TILESIZE
+        self.target_direc.update(t_pos_x - self.rect.centerx,
+                t_pos_y - self.rect.centery)
+        try:
+            self.target_direc.normalize_ip()
+        except ValueError: pass
+        if pygame.Rect(t_pos_x-1, t_pos_y-1, 2, 2).collidepoint(self.rect.center):
+            self.path_cell_index += 1
+
     def process_events(self):
 
         pass
@@ -155,7 +189,7 @@ class Enemy(pygame.sprite.Sprite):
     def get_hurt(self, damage):
 
         if self.invinsible or self.state == DEAD: return False
-        if self.state in (IDLE,):
+        if self.state in (IDLE, PATH):
             self.state = ANGRY
         elif self.state != ANGRY: self.state = FOLLOW
         self.health -= damage
@@ -186,6 +220,7 @@ class Enemy(pygame.sprite.Sprite):
 
         if self.state != DEAD:
             self.process_events()
+            self.follow_path()
         self.check_timers()
         if self.state != DEAD:
             self.control()
@@ -200,7 +235,7 @@ class Guard(Enemy):
     def __init__(self, master, grps, level, sprite_type, pos):
 
         super().__init__(master, grps, level, sprite_type, pos,
-                         (0, 0, 16, 16), (0, 0, 32, 32), 2, 0.8, 0.1, 0.1)
+                         (0, 0, 14, 14), (0, 0, 32, 32), 2, 0.8, 0.1, 0.1)
         
         self.ambience_dist = 16*TILESIZE # makes creature noises within this distance
         self.calm_dist = 28*TILESIZE # clams the creature after this distance
@@ -214,14 +249,14 @@ class Guard(Enemy):
         if dist < self.attack_dist**2 and self.state == ANGRY:
             self.state = FOLLOW
         elif dist < self.follow_dist**2:
-            if self.state == IDLE:
+            if self.state == PATH:
                 self.state = FOLLOW
         elif self.state != ANGRY:
-            self.state = IDLE
+            self.state = PATH
             self.target_direc.update()
 
         if dist > self.calm_dist**2 and self.state == ANGRY:
-            self.state = IDLE
+            self.state = PATH
 
         if self.state in (FOLLOW, ANGRY):
             self.target_direc.update(self.master.player.rect.centerx - self.rect.centerx,
@@ -242,4 +277,4 @@ class Fish(Enemy):
     def __init__(self, master, grps, level, sprite_type, pos):
 
         super().__init__(master, grps, level, sprite_type, pos,
-                         (0, 0, 16, 16), (0, 0, 16, 16), 1, 1, 0.1, 0.1)
+                         (0, 0, 14, 14), (0, 0, 16, 16), 1, 0.5, 0.1, 0.1)
