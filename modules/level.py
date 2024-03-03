@@ -2,23 +2,34 @@ import pygame
 from .engine import *
 from .config import *
 from .enemies import Enemy
+from pytmx.util_pygame import load_pygame
+import json
 from math import sin, pi
 from random import randint, choice, random
 
 
 class Level:
 
-    def __init__(self, master, player):
+    def __init__(self, master, player, map_type):
 
         self.master = master
         master.level = self
         self.screen = pygame.display.get_surface()
 
         # self.collision = collision
-        self.collision, pos = generate_map()
-        self.size = len(self.collision[0]), len(self.collision)
-        player.hitbox.center = pos
-        player.rect.center = pos
+        self.name = map_type
+        self.data = load_pygame(F"data/{map_type}.tmx")
+        self.size = self.data.width, self.data.height
+
+        # self.collision = generate_map()
+        # self.size = len(self.collision[0]), len(self.collision)
+        self.size = self.data.width, self.data.height
+        self.get_collision_data()
+        self.get_tile_layers()
+        self.player_pos = json.loads(self.data.properties["player_start_pos"])
+        self.player_pos = self.player_pos[0]*TILESIZE +TILESIZE//2, self.player_pos[1]*TILESIZE +TILESIZE//2
+        player.hitbox.center = self.player_pos
+        player.rect.center = self.player_pos
         self.master.camera.snap_offset()
 
         self.player_bullets_grp = CustomGroup()
@@ -34,19 +45,65 @@ class Level:
               self.player.hitbox.copy(), self.player.hitbox.copy(), 5, 0.9, 0.1, 0.1,
               ambience_dist=(16*16), calm_dist=(28*16), follow_dist=(4*16), attack_dist=(1.5*16))
 
+    def get_collision_data(self):
+        
+        for tileset in self.data.tilesets:
+            if tileset.name == "collision":
+                collision_firstgid = tileset.firstgid
+            # if tileset.name == "objects":
+            #     self.object_firstgid = tileset.firstgid
+
+        self.collision = self.data.get_layer_by_name("collision").data
+        
+        for y, row in enumerate(self.collision):
+            for x, gid in enumerate(row):
+
+                self.collision[y][x] = self.data.tiledgidmap[gid] - collision_firstgid
+
+    def get_tile_layers(self):
+
+        self.tile_map_layers = [self.data.get_layer_by_name("main")]
 
     def draw_bg(self):
 
-        self.screen.fill(0x909090)
+        # self.screen.fill(0x909090)
+        if self.data.background_color:
+            self.screen.fill(self.data.background_color)
+        else:
+            self.screen.fill(0)
 
-        for y, row in enumerate(self.collision):
-            for x, cell in enumerate(row):
-                if cell == 1:
-                    color = "green"
-                    if x == 0 or y == 0 or x == len(row)-1 or y == len(self.collision)-1: color = "blue"
-                    pygame.draw.rect(self.screen, color, (x*TILESIZE+self.master.offset.x, y*TILESIZE+self.master.offset.y, TILESIZE, TILESIZE), 1)
-                    pygame.draw.line(self.screen, color, (x*TILESIZE+self.master.offset.x, y*TILESIZE+self.master.offset.y), (x*TILESIZE+self.master.offset.x+TILESIZE-1, y*TILESIZE+self.master.offset.y+TILESIZE-1), 1)
+        px1 = int(self.master.offset.x*-1//TILESIZE)
+        px2 = px1 + W//TILESIZE +1
+        py1 = int(self.master.offset.y*-1//TILESIZE)
+        py2 = py1 + H//TILESIZE
 
+        if px2 >= self.size[0]: px2 = self.size[0]-1
+        if py2 >= self.size[1]: py2 = self.size[1]-1
+        if px2 < 0: px2 = 0
+        if py2 < 0: py2 = 0
+
+        for y in range(py1, py2+1):
+            for x in range(px1, px2+1):
+
+                for layer in self.tile_map_layers:
+
+                    gid = layer.data[y][x]
+                    image = self.data.get_tile_image_by_gid(gid)
+                    if image is None: continue
+                    self.screen.blit(image, (x*TILESIZE + self.master.offset.x, y*TILESIZE + self.master.offset.y - image.get_height() + TILESIZE))
+
+                if self.master.debug.on and False: # disabled
+                    cell = self.collision[y][x]
+                    if cell == 1:
+                        color = "green"
+                        if x == 0 or y == 0 or x == self.size[0]-1 or y == self.size[1]-1: color = "blue"
+                        pygame.draw.rect(self.screen, color, (x*TILESIZE+self.master.offset.x, y*TILESIZE+self.master.offset.y, TILESIZE, TILESIZE), 1)
+                        pygame.draw.line(self.screen, color, (x*TILESIZE+self.master.offset.x, y*TILESIZE+self.master.offset.y), (x*TILESIZE+self.master.offset.x+TILESIZE-1, y*TILESIZE+self.master.offset.y+TILESIZE-1), 1)
+
+    def draw(self):
+
+        self.enemy_grp.draw()
+        self.player_bullets_grp.draw()
 
     def draw_fg(self):
 
@@ -62,8 +119,7 @@ class Level:
         #     direc.rotate(-30)*(W+H)/3 + (vignette.get_width()/2, vignette.get_height()/2),
         #     direc.rotate(30)*(W+H)/3 + (vignette.get_width()/2, vignette.get_height()/2),
         # ))
-        self.enemy_grp.draw()
-        self.player_bullets_grp.draw()
+        
         if self.master.debug.vignette:
             self.screen.blit(self.vignette, (-W/2, -H/2))
             # self.screen.blit(self.vignette, (0, 0))

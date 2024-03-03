@@ -25,7 +25,9 @@ class Game:
         self.camera.set_target(self.player, lambda p: p.rect.center + p.direction*TILESIZE)
         self.camera.snap_offset()
 
-        self.level = Level(master, self.player)
+        self.level = Level(master, self.player, "test_level")
+        # self.level = Level(master, self.player, "level_1")
+        # self.level = Level(master, self.player, "level_0")
 
         self.paused = False
 
@@ -47,7 +49,8 @@ class Game:
         self.level.update()
 
         self.level.draw_bg()
-        self.camera.draw()
+        # self.camera.draw()
+        self.level.draw()
         self.player.draw()
         self.level.draw_fg()        
 
