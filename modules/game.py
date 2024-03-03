@@ -1,7 +1,7 @@
 import pygame
 from .engine import *
 from .config import *
-from .level import Level
+from .level import Level, load_resources
 from .menus import PauseMenu
 from .player import Player, load_materials
 
@@ -14,6 +14,7 @@ class Game:
         self.screen = pygame.display.get_surface()
 
         load_materials()
+        load_resources()
 
         self.master.offset = pygame.Vector2(0, 0)
 

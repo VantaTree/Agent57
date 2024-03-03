@@ -11,7 +11,7 @@ def load_materials():
     
     global SPRITES
 
-    SPRITES["test"] = import_sprite_sheets("graphics/test")
+    SPRITES["player"] = import_sprite_sheets("graphics/player")
 
 
 class Player(pygame.sprite.Sprite):
@@ -23,11 +23,8 @@ class Player(pygame.sprite.Sprite):
         self.master.player = self
         self.screen = pygame.display.get_surface()
 
-        pos = [32, 32]
-
-        # self.animation = SPRITES["test"]["player"]
-        self.animation = [pygame.image.load("graphics/test_player.png").convert_alpha()]
-        self.image = self.animation[0]
+        self.animations = SPRITES["player"]
+        self.image = self.animations["swim"][0]
         self.rect = self.image.get_rect()
 
         self.tri_vignette = pygame.image.load("graphics/tri_vignette.png").convert_alpha()
@@ -37,10 +34,10 @@ class Player(pygame.sprite.Sprite):
         self.anim_speed = 0.15
 
         self.hitbox = pygame.FRect(0, 0, 16, 16)
-        self.hitbox.center = pos
-        self.rect.center = pos
+        # self.hitbox.center = pos
+        # self.rect.center = pos
         self.velocity = pygame.Vector2()
-        self.max_speed = 1.1
+        self.max_speed = 1.3
         self.acceleration = 0.15
         self.deceleration = 0.3
         self.direction = pygame.Vector2(0, 1)
@@ -54,18 +51,25 @@ class Player(pygame.sprite.Sprite):
 
     def update_image(self):
 
+        # if self.moving: state = "swim"
+        state = "swim"
+
         try:
-            self.image = self.animation[int(self.anim_index)]
+            self.image = self.animations[state][int(self.anim_index)]
         except IndexError:
-            self.image = self.animation[0]
+            self.image = self.animations[state][0]
             self.anim_index = 0
 
         if self.moving: self.anim_speed = 0.15
-        else: self.anim_speed = 0.08
+        # else: self.anim_speed = 0.08
+        else: self.anim_speed = 0
 
         self.anim_index += self.anim_speed *self.master.dt
-        # self.image = pygame.transform.rotozoom(self.image, self.direction.angle_to((0, -1))//15*15, 1)
-        self.image = pygame.transform.rotate(self.image, round(self.direction.angle_to((0, -1))/15)*15)
+
+        mirror = self.direction.dot((-1, 0)) > 0
+        self.image = pygame.transform.flip(self.image, False, mirror)
+        # self.image = pygame.transform.rotozoom(self.image, round(self.direction.angle_to((1, 0))/15)*15, 1)
+        self.image = pygame.transform.rotate(self.image, round(self.direction.angle_to((1, 0))/15)*15)
         self.rect = self.image.get_rect(center = self.hitbox.center)
 
 
@@ -115,9 +119,10 @@ class Player(pygame.sprite.Sprite):
 
     def spawn_bullet(self):
 
+        direc = pygame.Vector2()
+        direc.from_polar((1, -round(self.direction.angle_to((1, 0))/15)*15))
         Bullet(self.master, [self.master.level.player_bullets_grp],
-                        self.hitbox.center, self.direction)
-        # self.master.level.player_bullets_grp.add(bullet)
+                        self.hitbox.center, direc)
 
     def draw(self):
 

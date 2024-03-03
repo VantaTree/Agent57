@@ -1,12 +1,14 @@
 import pygame
 from .engine import *
 from .config import *
-from .enemies import Enemy
+from .enemies import Enemy, load_enemy_sprites
 from pytmx.util_pygame import load_pygame
 import json
 from math import sin, pi
 from random import randint, choice, random
 
+def load_resources():
+    load_enemy_sprites()
 
 class Level:
 
@@ -41,9 +43,12 @@ class Level:
         self.orig_vignette.fill((0, 0, 0))
         self.vignette = self.orig_vignette.copy()
 
-        Enemy(master, [self.enemy_grp], self, None, self.player.rect.center,
-              self.player.hitbox.copy(), self.player.hitbox.copy(), 5, 0.9, 0.1, 0.1,
-              ambience_dist=(16*16), calm_dist=(28*16), follow_dist=(4*16), attack_dist=(1.5*16))
+        Enemy(master, [self.enemy_grp], self, "fish1", self.player.rect.center,
+              self.player.hitbox.copy(), self.player.hitbox.copy(), 5, 1, 0.1, 0.1,
+              ambience_dist=(16*16), calm_dist=(28*16), follow_dist=(6*16), attack_dist=(1.5*16))
+        Enemy(master, [self.enemy_grp], self, "guard", (self.player.rect.centerx+8, self.player.rect.centery+12),
+              pygame.FRect(0, 0, 26, 26), pygame.FRect(0, 0, 32, 32), 5, 0.8, 0.1, 0.1,
+              ambience_dist=(16*16), calm_dist=(28*16), follow_dist=(6*16), attack_dist=(1.5*16))
 
     def get_collision_data(self):
         
@@ -75,7 +80,7 @@ class Level:
         px1 = int(self.master.offset.x*-1//TILESIZE)
         px2 = px1 + W//TILESIZE +1
         py1 = int(self.master.offset.y*-1//TILESIZE)
-        py2 = py1 + H//TILESIZE
+        py2 = py1 + H//TILESIZE +1
 
         if px2 >= self.size[0]: px2 = self.size[0]-1
         if py2 >= self.size[1]: py2 = self.size[1]-1

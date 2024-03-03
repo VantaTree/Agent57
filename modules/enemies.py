@@ -11,8 +11,8 @@ def load_enemy_sprites():
 
     global ENEMY_SPRITES
 
-    pass
-        # ENEMY_SPRITES[folder] = import_sprite_sheets(F"graphics/enemies/{folder}")
+    for folder in ("guard", "fish1"):
+        ENEMY_SPRITES[folder] = import_sprite_sheets(F"graphics/enemies/{folder}")
 
 
 IDLE = 0
@@ -32,11 +32,9 @@ class Enemy(pygame.sprite.Sprite):
         self.level = level
 
         self.sprite_type = sprite_type
-        # self.animations = ENEMY_SPRITES[sprite_type]
-        # self.image = self.animations["idle"][0]
-        self.animations = [pygame.image.load("graphics/test_enemy.png").convert_alpha()]
-        self.image = self.animations[0]
-        self.rect = self.image.get_rect(topleft=pos)
+        self.animations = ENEMY_SPRITES[sprite_type]
+        self.image = self.animations["swim"][0]
+        self.rect = self.image.get_rect(center=pos)
 
         self.anim_index = 0
         self.anim_speed = 0.15
@@ -46,13 +44,13 @@ class Enemy(pygame.sprite.Sprite):
 
         self.pos = pos
         self.hitbox = pygame.FRect(*hitbox)
-        self.hitbox.midbottom = self.rect.midbottom
+        self.hitbox.center = self.rect.center
         self.velocity = pygame.Vector2()
         self.target_direc = pygame.Vector2()
         self.max_speed = max_speed
         self.acceleration = acc
         self.deceleration = dcc
-        self.facing_direc = pygame.Vector2(choice((1, -1)), 0)
+        self.direction = pygame.Vector2(choice((1, -1)), 0)
 
         self.state = IDLE
         self.moving = False
@@ -71,17 +69,16 @@ class Enemy(pygame.sprite.Sprite):
 
     def update_image(self):
 
-        if self.state == DYING: state = "dead"
-        elif self.moving: state = "run"
-        elif self.state == ATTACK: state = "attack"
-        else: state = "idle"
+        # if self.state == DYING: state = "dead"
+        # elif self.moving: state = "run"
+        # elif self.state == ATTACK: state = "attack"
+        # else: state = "idle"
+        state = "swim"
 
         try:
-            # image = self.animations[state][int(self.anim_index)]
-            self.image = self.animations[int(self.anim_index)]
+            image = self.animations[state][int(self.anim_index)]
         except IndexError:
-            # image = self.animations[state][0]
-            self.image = self.animations[0]
+            image = self.animations[state][0]
             self.anim_index = 0
             if self.state == ATTACK:
                 self.state = FOLLOW
@@ -91,12 +88,15 @@ class Enemy(pygame.sprite.Sprite):
 
         if self.moving: self.anim_speed = 0.15
         elif self.state == ATTACK: self.anim_speed = 0.18
-        else: self.anim_speed = 0.08
+        # else: self.anim_speed = 0.08
+        else: self.anim_speed = 0
 
         self.anim_index += self.anim_speed *self.master.dt
 
-        self.image = pygame.transform.rotate(self.image, round(self.facing_direc.angle_to((0, -1))/15)*15)
-        self.rect = self.image.get_rect(midbottom = self.hitbox.midbottom)
+        mirror = self.direction.dot((-1, 0)) > 0
+        image = pygame.transform.flip(image, False, mirror)
+        self.image = pygame.transform.rotate(image, round(self.direction.angle_to((1, 0))/15)*15)
+        self.rect = self.image.get_rect(center = self.hitbox.center)
 
         if self.invinsible:
             if self.hurting:
@@ -124,7 +124,7 @@ class Enemy(pygame.sprite.Sprite):
 
         self.moving = bool(self.target_direc) and not self.hurting
         if self.moving:
-            self.facing_direc.update(self.target_direc)
+            self.direction.update(self.target_direc)
 
     def check_timers(self):
 
@@ -144,16 +144,19 @@ class Enemy(pygame.sprite.Sprite):
     def process_events(self):
 
         if self.state == DYING: return
-
         dist = dist_sq(self.master.player.rect.center, self.rect.center)
-        if dist < self.follow_dist**2:
+        if dist < self.attack_dist**2 and self.state == ANGRY:
+            self.state = FOLLOW
+        elif dist < self.follow_dist**2:
             if self.state == IDLE:
-                self.state = AGRO
+                self.state = FOLLOW
         elif self.state != ANGRY:
             self.state = IDLE
             self.target_direc.update()
+
         if dist > self.calm_dist**2 and self.state == ANGRY:
             self.state = IDLE
+
         if self.state in (FOLLOW, ANGRY):
             self.target_direc.update(self.master.player.rect.centerx - self.rect.centerx,
                 self.master.player.rect.centery - self.rect.centery)
@@ -161,16 +164,11 @@ class Enemy(pygame.sprite.Sprite):
                 self.target_direc.normalize_ip()
             except ValueError: pass
 
-        if self.state in (AGRO, FOLLOW, ANGRY):
-            self.facing_direc.update(self.master.player.rect.centerx - self.rect.centerx,
+            self.direction.update(self.master.player.rect.centerx - self.rect.centerx,
                 self.master.player.rect.centery - self.rect.centery)
             try:
-                self.facing_direc.normalize_ip()
+                self.direction.normalize_ip()
             except ValueError: pass
-            if dist < self.attack_dist**2:
-                self.state = ATTACK
-                self.anim_index = 0
-                self.target_direc.update()
 
     def check_player_collision(self):
 
