@@ -4,7 +4,7 @@ from .engine import *
 from .entity import *
 from .projectiles import Bullet
 from random import randint, choice
-from math import sin, sqrt
+from math import sin, sqrt, radians
 from pathfinding.finder.a_star import AStarFinder
 from pathfinding.core.diagonal_movement import DiagonalMovement
 
@@ -323,6 +323,10 @@ class Guard(Enemy):
             except ValueError: pass
 
         self.master.debug("State:",["IDLE", "PATH", "AGRO", "ATTACK", "ANGRY"][self.state])
+        angle = self.direction.angle_to([1, 0])
+        pygame.draw.arc(self.master.debug.surface, (108, 10, 50, 50),
+            [self.master.offset.x-self.agro_dist+self.rect.centerx, self.master.offset.y-self.agro_dist+self.rect.centery, self.agro_dist*2, self.agro_dist*2],
+            radians(angle-(1-self.fov)*90), radians(angle+(1-self.fov)*90),  self.agro_dist)
 
     def shoot_bullet(self):
 
@@ -360,17 +364,21 @@ class Guard(Enemy):
 
         if direc.x < 0:
             step_dir.x = -1
-            ray_len.x = (start_pos.x % 1) * step_size.x
+            # ray_len.x = (start_pos.x % 1) * step_size.x
+            ray_len.x = (start_pos.x - map_check.x) * step_size.x
         else:
             step_dir.x = 1
-            ray_len.x = (1 - start_pos.x % 1) * step_size.x
+            # ray_len.x = (1 - start_pos.x % 1) * step_size.x
+            ray_len.x = (map_check.x+1 - start_pos.x) * step_size.x
 
         if direc.y < 0:
             step_dir.y = -1
-            ray_len.x = (start_pos.y % 1) * step_size.x
+            # ray_len.x = (start_pos.y % 1) * step_size.x
+            ray_len.x = (start_pos.y - map_check.y) * step_size.x
         else:
             step_dir.y = 1
-            ray_len.x = (1 - start_pos.y % 1) * step_size.x
+            # ray_len.x = (1 - start_pos.y % 1) * step_size.x
+            ray_len.x = (map_check.y+1 - start_pos.y) * step_size.x
 
         tile_found = False
         max_dist = W+H
@@ -391,7 +399,7 @@ class Guard(Enemy):
 
         if tile_found:
             intersection = start_pos + direc * dist
-            pygame.draw.line(self.master.debug.surface, "brown", self.hitbox.center+self.master.offset,
+            pygame.draw.line(self.master.debug.surface, (255, 215, 0), self.hitbox.center+self.master.offset,
                              intersection*TILESIZE+self.master.offset)
 
         return not tile_found or (dist*TILESIZE)**2 > player_dist
