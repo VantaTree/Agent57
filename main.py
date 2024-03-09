@@ -49,7 +49,7 @@ class App:
         self.master = Master()
         # SoundSet(self.master)
         self.master.app = self
-        self.debug = Debug(self.screen, font=self.master.font_d, offset=4)
+        self.debug = Debug(self.screen, font=self.master.font_d, offset=4, surf_enabled=True)
         self.master.debug = self.debug
         self.game = Game(self.master)
         self.main_menu = MainMenu(self.master)

@@ -30,7 +30,7 @@ class Player(pygame.sprite.Sprite):
 
         # self.tri_vignette = pygame.image.load("graphics/tri_vignette.png").convert_alpha()
         self.pl_vignette = pygame.image.load("graphics/player_vignette.png").convert_alpha()
-        self.bullet_sprite = BULLET_SPRITE
+        self.bullet_sprite = BULLET_SPRITE["player_bullet"]
 
         self.anim_index = 0
         self.anim_speed = 0.15
@@ -145,11 +145,13 @@ class Player(pygame.sprite.Sprite):
         if self.death_wait_timer.check():
             self.master.app.death_screen()
 
-    def get_hurt(self):
+    def get_hurt(self, _damage=1):
 
+        if self.is_dead or self.dying: return
         # instant kill
         self.dying = True
         self.in_control = False
+        self.moving = False
         self.dying_timer.start(3_000)
 
     def spawn_bullet(self):
@@ -158,7 +160,7 @@ class Player(pygame.sprite.Sprite):
         direc = pygame.Vector2()
         direc.from_polar((1, -round(self.direction.angle_to((1, 0))/15)*15))
         Bullet(self.master, [self.master.level.player_bullets_grp],
-                        self.hitbox.center, direc)
+                        self.hitbox.center, direc, (6, 6))
         
     def check_on_disguise(self):
 

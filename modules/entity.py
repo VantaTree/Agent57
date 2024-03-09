@@ -33,6 +33,16 @@ def is_colliding(entity, master, obj_rects=None):
 
     return False
 
+def check_mask_collision(attack_img:pygame.Surface, attack_rect:pygame.Rect,
+                         target_img:pygame.Surface, target_rect:pygame.Rect) -> bool:
+
+    if not attack_rect.colliderect(target_rect): return False
+    attack_mask = pygame.mask.from_surface(attack_img)
+    target_mask = pygame.mask.from_surface(target_img)
+    # enemy_mask = pygame.mask.Mask(enemy.sprite_box.size, True)
+    return attack_mask.overlap(target_mask, (target_rect.x-attack_rect.x,
+                                             target_rect.y-attack_rect.y))
+
 
 def do_collision(entity, axis, master, obj_rects=None):
 
