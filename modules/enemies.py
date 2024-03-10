@@ -139,7 +139,7 @@ class Enemy(pygame.sprite.Sprite):
         do_collision(self, 0, self.master)
         self.hitbox.centery += self.velocity.y * self.master.dt
         do_collision(self, 1, self.master)
-        do_collision(self, 2, self.master)
+        # do_collision(self, 2, self.master)
 
     def follow_path(self, generate_new_on_end=True):
 
@@ -227,7 +227,8 @@ class Enemy(pygame.sprite.Sprite):
     def draw(self):
 
         self.screen.blit(self.image, self.rect.topleft + self.master.offset)
-        # pygame.draw.rect(self.screen, "blue", (self.hitbox.x+self.master.offset.x, self.hitbox.y+self.master.offset.y, self.hitbox.width, self.hitbox.height), 1)
+        if self.master.debug.on:
+            pygame.draw.rect(self.master.debug.surface, (24, 116, 205, 100), (self.hitbox.x+self.master.offset.x, self.hitbox.y+self.master.offset.y, self.hitbox.width, self.hitbox.height), 1)
 
     def update(self):
 
@@ -283,6 +284,13 @@ class Guard(Enemy):
     def process_events(self):
 
         if self.state == DEAD: return
+
+        self.master.debug("State:",["IDLE", "PATH", "AGRO", "ATTACK", "ANGRY"][self.state])
+        angle = self.direction.angle_to([1, 0])
+        pygame.draw.arc(self.master.debug.surface, (108, 10, 50, 50),
+            [self.master.offset.x-self.agro_dist+self.rect.centerx, self.master.offset.y-self.agro_dist+self.rect.centery, self.agro_dist*2, self.agro_dist*2],
+            radians(angle-(1-self.fov)*90), radians(angle+(1-self.fov)*90),  self.agro_dist)
+
         dist = dist_sq(self.master.player.rect.center, self.rect.center)
         to_player = pygame.Vector2(self.master.player.hitbox.centerx - self.hitbox.centerx,
             self.master.player.hitbox.centery - self.hitbox.centery)
@@ -322,12 +330,6 @@ class Guard(Enemy):
                 self.target_direc.normalize_ip()
             except ValueError: pass
 
-        self.master.debug("State:",["IDLE", "PATH", "AGRO", "ATTACK", "ANGRY"][self.state])
-        angle = self.direction.angle_to([1, 0])
-        pygame.draw.arc(self.master.debug.surface, (108, 10, 50, 50),
-            [self.master.offset.x-self.agro_dist+self.rect.centerx, self.master.offset.y-self.agro_dist+self.rect.centery, self.agro_dist*2, self.agro_dist*2],
-            radians(angle-(1-self.fov)*90), radians(angle+(1-self.fov)*90),  self.agro_dist)
-
     def shoot_bullet(self):
 
         direc = pygame.Vector2()
@@ -335,74 +337,67 @@ class Guard(Enemy):
         Bullet(self.master, [self.master.level.player_bullets_grp], 
                self.hitbox.center, direc, (7, 7), False, 2)
         
-    def in_line_of_sight(self, player_dist, direc=None) -> bool:
+    def in_line_of_sight(self, target_dist, direc=None) -> bool:
 
-        start_pos = pygame.Vector2(self.hitbox.center) / TILESIZE
-        # end_pos = pygame.Vector2(self.master.player.hitbox.center) / TILESIZE
+        ray_pos_x = self.hitbox.centerx / TILESIZE
+        ray_pos_y = self.hitbox.centery / TILESIZE
         if direc is None:
             direc = pygame.Vector2(self.master.player.hitbox.centerx - self.hitbox.centerx,
                 self.master.player.hitbox.centery - self.hitbox.centery)
             try:
                 direc.normalize_ip()
             except ValueError: pass
+        direc.x += .000000000000001
+        direc.y += .000000000000001
 
-        try:
-            dx = abs(1 / direc.x)
-            # dx = sqrt(1 + (direc.y / direc.x) ** 2)
-        except ZeroDivisionError:
-            dx = float("inf")
-        try:
-            dy = abs(1 / direc.y)
-            # dy = sqrt(1 + (direc.x / direc.y) ** 2)
-        except ZeroDivisionError:
-            dy = float("inf")
-        step_size = pygame.Vector2( dx, dy )
-        # step_size = pygame.Vector2( sqrt(1 + (direc.y / direc.x) ** 2), sqrt(1 + (direc.x / direc.y) ** 2) )
-        map_check = pygame.Rect(*start_pos, 0, 0)
-        ray_len = pygame.Vector2()
-        step_dir = pygame.Rect(0, 0, 0, 0)
+        map_x = int(ray_pos_x)
+        map_y = int(ray_pos_y)
+        delta_dist_x = abs(1 / direc.x)
+        delta_dist_y = abs(1 / direc.y)
+        # delta_dist_x = sqrt(1 + (direc.y / direc.x) ** 2)
+        # delta_dist_y = sqrt(1 + (direc.x / direc.y) ** 2)
+        ray_len_x = 0
+        ray_len_y = 0
+        step_x = 0
+        step_y = 0
 
         if direc.x < 0:
-            step_dir.x = -1
-            # ray_len.x = (start_pos.x % 1) * step_size.x
-            ray_len.x = (start_pos.x - map_check.x) * step_size.x
+            step_x = -1
+            ray_len_x = (ray_pos_x - map_x) * delta_dist_x
         else:
-            step_dir.x = 1
-            # ray_len.x = (1 - start_pos.x % 1) * step_size.x
-            ray_len.x = (map_check.x+1 - start_pos.x) * step_size.x
+            step_x = 1
+            ray_len_x = (map_x+1 - ray_pos_x) * delta_dist_x
 
         if direc.y < 0:
-            step_dir.y = -1
-            # ray_len.x = (start_pos.y % 1) * step_size.x
-            ray_len.x = (start_pos.y - map_check.y) * step_size.x
+            step_y = -1
+            ray_len_y = (ray_pos_y - map_y) * delta_dist_y
         else:
-            step_dir.y = 1
-            # ray_len.x = (1 - start_pos.y % 1) * step_size.x
-            ray_len.x = (map_check.y+1 - start_pos.y) * step_size.x
+            step_y = 1
+            ray_len_y = (map_y+1 - ray_pos_y) * delta_dist_y
 
         tile_found = False
         max_dist = W+H
         dist = 0.0
         while (not tile_found and dist < max_dist):
-            if ray_len.x < ray_len.y:
-                map_check.x += step_dir.x
-                dist = ray_len.x
-                ray_len.x += step_size.x
+            if ray_len_x < ray_len_y:
+                map_x += step_x
+                dist = ray_len_x
+                ray_len_x += delta_dist_x
             else:
-                map_check.y += step_dir.y
-                dist = ray_len.y
-                ray_len.y += step_size.y
+                map_y += step_y
+                dist = ray_len_y
+                ray_len_y += delta_dist_y
 
             # if self.level.size[0] > map_check.x >= 0 and self.level.size[1] > map_check.y >= 0:
-            if self.level.collision[map_check.y][map_check.x]:
+            if self.level.collision[map_y][map_x]:
                 tile_found = True
 
         if tile_found:
-            intersection = start_pos + direc * dist
+            intersection = (ray_pos_x, ray_pos_y) + direc * dist
             pygame.draw.line(self.master.debug.surface, (255, 215, 0), self.hitbox.center+self.master.offset,
                              intersection*TILESIZE+self.master.offset)
 
-        return not tile_found or (dist*TILESIZE)**2 > player_dist
+        return not tile_found or (dist*TILESIZE)**2 > target_dist
         
 
 class Fish(Enemy):

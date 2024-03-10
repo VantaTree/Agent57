@@ -111,7 +111,7 @@ class Player(pygame.sprite.Sprite):
         do_collision(self, 0, self.master)
         self.hitbox.centery += self.velocity.y * self.master.dt
         do_collision(self, 1, self.master)
-        do_collision(self, 2, self.master)
+        # do_collision(self, 2, self.master)
 
     def process_events(self):
 
@@ -129,7 +129,9 @@ class Player(pygame.sprite.Sprite):
                     self.master.game.pause_game()
                 if event.key == pygame.K_v:
                     self.master.debug.vignette = not self.master.debug.vignette
-                if event.key == pygame.K_SPACE and self.in_control:
+                if event.key == pygame.K_l:
+                    self.master.debug.on = not self.master.debug.on
+                if event.key in (pygame.K_SPACE, pygame.K_e) and self.in_control:
                     self.check_level_finish()
                     self.check_on_disguise()
                 # if event.key == pygame.K_x:
@@ -202,8 +204,8 @@ class Player(pygame.sprite.Sprite):
         #                       special_flags=pygame.BLEND_RGBA_MIN)
 
 
-        # if self.master.debug.on:
-        #     pygame.draw.rect(self.screen, "blue", (self.hitbox.x+self.master.offset.x, self.hitbox.y+self.master.offset.y, self.hitbox.width, self.hitbox.height), 1)
+        if self.master.debug.on:
+            pygame.draw.rect(self.master.debug.surface, (24, 116, 205, 100), (self.hitbox.x+self.master.offset.x, self.hitbox.y+self.master.offset.y, self.hitbox.width, self.hitbox.height), 1)
 
     def update(self):
 

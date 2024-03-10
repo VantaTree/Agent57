@@ -70,6 +70,8 @@ class Bullet(pygame.sprite.Sprite):
     def draw(self):
         
         self.screen.blit(self.image, self.rect.topleft+self.master.offset)
+        if self.master.debug.on:
+            pygame.draw.rect(self.master.debug.surface, (139, 10, 80, 100), (self.hitbox.x+self.master.offset.x, self.hitbox.y+self.master.offset.y, self.hitbox.width, self.hitbox.height), 1)
 
         # if self.master.debug.vignette:
         #     vignette = self.master.level.vignette
