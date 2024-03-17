@@ -67,6 +67,7 @@ class Slider:
         self.max_value = max_value
         self.step_value = step_value
         self._value = default_value
+        self.value = self._value
 
         self.color_text = color_text
         self.color_shadow = color_shadow
@@ -267,7 +268,7 @@ class SettingsMenu:
     def create_buttons(self):
 
         col = (185, 198, 194)
-        self.fps_slider = Slider(self.master, (W//2, H*0.5), "fps", self.buttons, 75, max_value=256, color_text=col, step_value=1)
+        self.fps_slider = Slider(self.master, (W//2, H*0.5), "fps", self.buttons, 75, max_value=256, color_text=col, default_value=FPS)
         Button(self.master, (W//2, H*0.6), 'back', self.buttons, col)
 
     def open(self, *, bg=None, bg_overlay=None, bg_color=None):
