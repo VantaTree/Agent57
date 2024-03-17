@@ -2,7 +2,6 @@ import pygame
 from .engine import *
 from .config import *
 from .level import Level, load_resources
-from .menus import PauseMenu
 from .player import Player, load_materials
 
 class Game:
@@ -18,8 +17,6 @@ class Game:
 
         self.master.offset = pygame.Vector2(0, 0)
 
-        self.pause_menu = PauseMenu(master)
-
         self.player = Player(master, [])
         self.camera = Camera(master)
         self.camera.set_target(self.player, lambda p: p.rect.center + p.direction*TILESIZE)
@@ -28,15 +25,6 @@ class Game:
         self.levels = ["test_level", "level_1", "level_0"]
         self.curr_level = 0
         self.level = Level(master, self.player, self.levels[self.curr_level])
-        # self.level = Level(master, self.player, "level_1")
-        # self.level = Level(master, self.player, "level_0")
-
-        self.paused = False
-
-    def pause_game(self):
-        if not self.paused:
-            self.paused = True
-            self.pause_menu.open()
 
     def next_level(self):
         self.curr_level += 1
@@ -58,11 +46,6 @@ class Game:
         self.player.bullets = self.player.max_bullets
 
     def run(self):
-
-        if self.paused:
-            self.pause_menu.draw()
-            self.pause_menu.update()
-            return
 
         self.level.vignette = self.level.orig_vignette.copy()
         self.player.update()

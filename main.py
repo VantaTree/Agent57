@@ -7,8 +7,9 @@ class Master:
     def __init__(self):
 
         self.app:App
-        self.debug:Debug
         self.dt:float
+        self.fps:int = FPS
+        self.debug:Debug
         self.offset:pygame.Vector2
 
         # self.font_d = pygame.font.Font("fonts/PixelOperator.ttf", 10)
@@ -28,7 +29,9 @@ class App:
     INTRO_CUTSCENE = 1
     IN_GAME = 2
     TRANSITION = 3
-
+    PAUSE = 4
+    SETTINGS = 5
+    
     GAME_WIN = 7
     GAME_LOOSE = 8
     THE_END = 10
@@ -47,14 +50,17 @@ class App:
         self.state = self.MAIN_MENU
 
         self.master = Master()
-        # SoundSet(self.master)
         self.master.app = self
         self.debug = Debug(self.screen, font=self.master.font_d, offset=4, surf_enabled=True)
         self.master.debug = self.debug
         self.game = Game(self.master)
         self.main_menu = MainMenu(self.master)
-        Music(self.master)
+        self.pause_menu = PauseMenu(self.master)
+        self.settings_menu = SettingsMenu(self.master)
         self.cutscene = FiFo(self.master, "intro", self.IN_GAME)
+
+        # SoundSet(self.master)
+        # Music(self.master)
 
     async def run(self):
         
@@ -62,9 +68,10 @@ class App:
 
             pygame.display.update()
 
-            self.master.dt = self.clock.tick(FPS) / 16.667
+            self.master.dt = self.clock.tick(self.master.fps) / 16.667
             if self.master.dt > 10: self.master.dt = 10
             self.debug("FPS:", round(self.clock.get_fps(), 2))
+            self.debug("Mouse:", pygame.mouse.get_pos())
             # self.debug("Offset:", (round(self.master.offset.x, 2), round(self.master.offset.y, 2)))
 
             for event in pygame.event.get((pygame.QUIT)):
@@ -90,6 +97,10 @@ class App:
                 self.game.restart_level()
         elif self.state == self.IN_GAME:
             self.game.run()
+        elif self.state == self.PAUSE:
+            self.pause_menu.run()
+        elif self.state == self.SETTINGS:
+            self.settings_menu.run()
         elif self.state == self.THE_END:
             self.screen.fill("gold")
             pass

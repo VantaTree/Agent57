@@ -126,7 +126,7 @@ class Player(pygame.sprite.Sprite):
                 pass
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE  and self.in_control:
-                    self.master.game.pause_game()
+                    self.master.pause_menu.open()
                 if event.key == pygame.K_v:
                     self.master.debug.vignette = not self.master.debug.vignette
                 if event.key == pygame.K_l:
@@ -218,5 +218,3 @@ class Player(pygame.sprite.Sprite):
 
         self.master.debug("pos: ", (round(self.hitbox.centerx, 2), round(self.hitbox.bottom, 2)))
         self.master.debug("angle: ", round(self.direction.angle_to((0, -1))))
-        self.master.debug("control: ", self.in_control)
-
