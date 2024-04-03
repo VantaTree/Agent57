@@ -31,6 +31,8 @@ class Player(pygame.sprite.Sprite):
         # self.tri_vignette = pygame.image.load("graphics/tri_vignette.png").convert_alpha()
         self.pl_vignette = pygame.image.load("graphics/player_vignette.png").convert_alpha()
         self.bullet_sprite = BULLET_SPRITE["player_bullet"]
+        self.interact_symbol = pygame.image.load("graphics/UI/interact_symbol.png").convert_alpha()
+        self.can_interact = False
 
         self.anim_index = 0
         self.anim_speed = 0.15
@@ -132,8 +134,8 @@ class Player(pygame.sprite.Sprite):
                 if event.key == pygame.K_l:
                     self.master.debug.on = not self.master.debug.on
                 if event.key in (pygame.K_SPACE, pygame.K_e) and self.in_control:
-                    self.check_level_finish()
-                    self.check_on_disguise()
+                    self.check_level_finish(True)
+                    self.check_on_disguise(True)
                 # if event.key == pygame.K_x:
                 #     self.flashlight = not self.flashlight
                 if event.key == pygame.K_h:
@@ -164,20 +166,23 @@ class Player(pygame.sprite.Sprite):
         Bullet(self.master, [self.master.level.player_bullets_grp],
                         self.hitbox.center, direc, (6, 6))
         
-    def check_on_disguise(self):
+    def check_on_disguise(self, interact=False):
 
         for enemy in self.master.level.enemy_grp.sprites():
             if not self.rect.colliderect(enemy.rect): continue
             if not enemy.dead: continue
-            if enemy.get_picked_up():
-                self.in_disgiuse = True
+            if enemy.can_get_picked_up(interact):
+                self.can_interact = True
+                if interact:
+                    self.in_disgiuse = True
         # self.in_disgiuse = not self.in_disgiuse
                 
-    def check_level_finish(self):
+    def check_level_finish(self, interact=False):
         if self.in_disgiuse and self.rect.colliderect((self.master.level.start_pos[0]-32,
                                                        self.master.level.start_pos[1]-32, 64, 64)):
-            self.master.game.next_level()
-            return True
+            self.can_interact = True
+            if interact:
+                self.master.game.next_level()
         
     def draw_ui(self):
 
@@ -185,6 +190,12 @@ class Player(pygame.sprite.Sprite):
         text_surf_rect = bullet_counter_surf.get_rect(topright=(W-5, 5))
         self.screen.blit(bullet_counter_surf, text_surf_rect)
         self.screen.blit(self.bullet_sprite, (W-self.bullet_sprite.get_width()-bullet_counter_surf.get_width()-10, 5))
+
+        self.can_interact = False
+        self.check_level_finish()
+        self.check_on_disguise()
+        if self.can_interact:
+            self.screen.blit(self.interact_symbol, self.hitbox.midtop+self.master.offset+[0, 6*sin(pygame.time.get_ticks()/300)-self.hitbox.h])
 
     def draw(self):
 

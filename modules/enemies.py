@@ -195,10 +195,11 @@ class Enemy(pygame.sprite.Sprite):
         # if self.hitbox.colliderect(self.master.player.hitbox):
         #     self.master.player.get_hurt(1)
     
-    def get_picked_up(self):
+    def can_get_picked_up(self, get_picked=True):
 
         if self.state != DEAD or self.sprite_type != "target_fish": return False
-        self.kill()
+        if get_picked:
+            self.kill()
         return True
 
     def get_hurt(self, damage):
