@@ -14,7 +14,7 @@ def load_enemy_sprites():
 
     global ENEMY_SPRITES
 
-    for folder in ("guard", "fish1", "target_fish"):
+    for folder in ("guard", "target_fish", "fish1", "fish2", "fish3"):
         ENEMY_SPRITES[folder] = import_sprite_sheets(F"graphics/enemies/{folder}")
 
 

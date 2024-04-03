@@ -82,7 +82,7 @@ class Level:
         for _ in range(total_fishes):
             point = choice(self.walk_positions)
             pos = point.x//TILESIZE *TILESIZE + TILESIZE//2, point.y//TILESIZE *TILESIZE + TILESIZE//2
-            Fish(self.master, [self.enemy_grp], self, "fish1", (pos))
+            Fish(self.master, [self.enemy_grp], self, F"fish{randint(1, 3)}", (pos))
         
         point = choice(self.walk_positions)
         pos = point.x//TILESIZE *TILESIZE + TILESIZE//2, point.y//TILESIZE *TILESIZE + TILESIZE//2
