@@ -42,7 +42,7 @@ class Game:
         self.player.is_dead = False
         self.player.moving = False
         self.player.in_control = True
-        self.player.in_disgiuse = False
+        self.player.in_disguise = False
         self.player.bullets = self.player.max_bullets
 
     def run(self):

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="40" height="50" tilewidth="16" tileheight="16" infinite="0" nextlayerid="8" nextobjectid="51">
  <properties>
+  <property name="bullets" type="int" value="8"/>
   <property name="guard_fishes" type="int" value="4"/>
   <property name="normal_fishes" type="int" value="13"/>
   <property name="player_start_pos" value="[22,2]"/>

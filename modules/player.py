@@ -42,7 +42,7 @@ class Player(pygame.sprite.Sprite):
         # self.rect.center = pos
         self.velocity = pygame.Vector2()
         self.max_speed = 1.3
-        self.disgiuse_speed = 0.8
+        self.disguise_speed = 0.8
         self.acceleration = 0.15
         self.deceleration = 0.3
         self.direction = pygame.Vector2(0, 1)
@@ -50,9 +50,10 @@ class Player(pygame.sprite.Sprite):
         self.moving = False
         self.is_dead = False
         # self.flashlight = True
-        self.in_disgiuse = False
+        self.in_disguise = False
         self.dying = False
         self.in_control = True
+        self.attacking = False
 
         self.max_bullets = None
         self.bullets = None
@@ -60,13 +61,14 @@ class Player(pygame.sprite.Sprite):
         self.shoot_cooldown_timer = CustomTimer()
         self.dying_timer = CustomTimer()
         self.death_wait_timer = CustomTimer()
+        self.shooting_duration_timer = CustomTimer()
         self.SHOOT_COOLDOWN = 1000
 
     def update_image(self):
 
         # if self.moving: state = "swim"
         if self.is_dead: state = "dead"
-        elif self.in_disgiuse: state = "cover_t_swim"
+        elif self.in_disguise: state = "cover_t_swim"
         else: state = "swim"
 
         try:
@@ -102,7 +104,7 @@ class Player(pygame.sprite.Sprite):
 
 
         if self.moving:
-            speed = self.disgiuse_speed if self.in_disgiuse else self.max_speed
+            speed = self.disguise_speed if self.in_disguise else self.max_speed
             self.velocity.move_towards_ip( self.direction*speed, self.acceleration *self.master.dt)
         else:
             self.velocity.move_towards_ip( (0, 0), self.deceleration *self.master.dt)
@@ -122,6 +124,8 @@ class Player(pygame.sprite.Sprite):
                 if event.button == 3 and not self.shoot_cooldown_timer.running and self.in_control\
                     and self.bullets > 0:
                     self.spawn_bullet()
+                    self.attacking = True
+                    self.shooting_duration_timer.start(30)
                     self.shoot_cooldown_timer.start(self.SHOOT_COOLDOWN)
                     
             if event.type == pygame.MOUSEBUTTONUP:
@@ -148,6 +152,8 @@ class Player(pygame.sprite.Sprite):
             self.death_wait_timer.start(2_000)
         if self.death_wait_timer.check():
             self.master.app.death_screen()
+        if self.shooting_duration_timer.check():
+            self.attacking = False
 
     def get_hurt(self, _damage=1):
 
@@ -174,11 +180,11 @@ class Player(pygame.sprite.Sprite):
             if enemy.can_get_picked_up(interact):
                 self.can_interact = True
                 if interact:
-                    self.in_disgiuse = True
-        # self.in_disgiuse = not self.in_disgiuse
+                    self.in_disguise = True
+        # self.in_disguise = not self.in_disguise
                 
     def check_level_finish(self, interact=False):
-        if self.in_disgiuse and self.rect.colliderect((self.master.level.start_pos[0]-32,
+        if self.in_disguise and self.rect.colliderect((self.master.level.start_pos[0]-32,
                                                        self.master.level.start_pos[1]-32, 64, 64)):
             self.can_interact = True
             if interact:

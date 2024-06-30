@@ -2,6 +2,7 @@ import pygame
 from .engine import *
 from .config import *
 from .enemies import Guard, Fish, load_enemy_sprites
+from .dialogue import DialogueManager, load_dialogue_sprites
 from pytmx.util_pygame import load_pygame
 import json
 from copy import deepcopy
@@ -11,6 +12,7 @@ from random import randint, choice, random
 
 def load_resources():
     load_enemy_sprites()
+    load_dialogue_sprites()
 
 class Level:
 
@@ -38,6 +40,8 @@ class Level:
         self.player_bullets_grp = CustomGroup()
         self.enemy_grp = CustomGroup()
         self.init_objects()
+
+        self.dialogue_manager = DialogueManager(master)
 
         self.orig_vignette = pygame.Surface((W*2, H*2), pygame.SRCALPHA)
         # self.orig_vignette = pygame.Surface((W, H), pygame.SRCALPHA)
@@ -73,7 +77,8 @@ class Level:
         self.guard_walk_positions = list(self.data.get_layer_by_name("guard_walk_positions"))
         total_guards = self.data.properties["guard_fishes"]
         total_fishes = self.data.properties["normal_fishes"] # excluding target fish
-        self.player.max_bullets = int(total_fishes*0.85) + total_guards
+        self.player.max_bullets = self.data.properties["bullets"]
+        # self.player.max_bullets = int(total_fishes*0.85) + total_guards
         self.player.bullets = self.player.max_bullets
         for _ in range(total_guards):
             point = choice(self.guard_walk_positions)
@@ -82,7 +87,7 @@ class Level:
         for _ in range(total_fishes):
             point = choice(self.walk_positions)
             pos = point.x//TILESIZE *TILESIZE + TILESIZE//2, point.y//TILESIZE *TILESIZE + TILESIZE//2
-            Fish(self.master, [self.enemy_grp], self, F"fish{randint(1, 3)}", (pos))
+            Fish(self.master, [self.enemy_grp], self, F"fish{choice([1, 1, 2, 3])}", (pos))
         
         point = choice(self.walk_positions)
         pos = point.x//TILESIZE *TILESIZE + TILESIZE//2, point.y//TILESIZE *TILESIZE + TILESIZE//2
@@ -144,6 +149,7 @@ class Level:
         #     direc.rotate(30)*(W+H)/3 + (vignette.get_width()/2, vignette.get_height()/2),
         # ))
         
+        self.dialogue_manager.draw()
         self.player.draw_ui()
         if self.player.dying:
             self.screen.blit(self.vignette, (-W/2, -H/2))
@@ -155,6 +161,7 @@ class Level:
 
         self.player_bullets_grp.update()
         self.enemy_grp.update()
+        self.dialogue_manager.update()
 
 
 class Node:

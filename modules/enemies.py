@@ -12,10 +12,13 @@ ENEMY_SPRITES = {}
 
 def load_enemy_sprites():
 
-    global ENEMY_SPRITES
+    global ENEMY_SPRITES, WARNING_SYMBOL, ALERT_SYMBOL
 
     for folder in ("guard", "target_fish", "fish1", "fish2", "fish3"):
         ENEMY_SPRITES[folder] = import_sprite_sheets(F"graphics/enemies/{folder}")
+    
+    ALERT_SYMBOL = pygame.image.load("graphics/UI/alert_symbol.png").convert_alpha()
+    WARNING_SYMBOL = pygame.image.load("graphics/UI/warning_symbol.png").convert_alpha()
 
 
 IDLE = 0
@@ -25,6 +28,7 @@ AGRO = 2
 ATTACK = 3
 ANGRY = 4
 DEAD = 5
+SUMMONED = 6
 
 class Enemy(pygame.sprite.Sprite):
 
@@ -61,6 +65,7 @@ class Enemy(pygame.sprite.Sprite):
         self.invinsible = False
         self.hurting = False
         self.dead = False
+        self.is_guard = False
 
         self.path_cells = []
         self.path_cell_index = 0
@@ -112,7 +117,7 @@ class Enemy(pygame.sprite.Sprite):
 
         if self.moving:
             for enemy in self.level.enemy_grp.sprites():
-                if enemy is self or enemy.dead: continue
+                if enemy is self: continue
                 if self.rect.colliderect(enemy.rect):
                     try:
                         space_vec = pygame.Vector2(self.rect.centerx-enemy.rect.centerx, self.rect.centery-enemy.rect.centery)
@@ -225,119 +230,6 @@ class Enemy(pygame.sprite.Sprite):
 
         pass
 
-    def draw(self):
-
-        self.screen.blit(self.image, self.rect.topleft + self.master.offset)
-        if self.master.debug.on:
-            pygame.draw.rect(self.master.debug.surface, (24, 116, 205, 100), (self.hitbox.x+self.master.offset.x, self.hitbox.y+self.master.offset.y, self.hitbox.width, self.hitbox.height), 1)
-
-    def update(self):
-
-        if self.state != DEAD:
-            self.process_events()
-            self.follow_path()
-        self.check_timers()
-        if self.state != DEAD:
-            self.control()
-            self.apply_force()
-            self.move()
-            self.check_player_collision()
-        self.update_image()
-
-
-class Guard(Enemy):
-
-    def __init__(self, master, grps, level, sprite_type, pos):
-
-        super().__init__(master, grps, level, sprite_type, pos,
-                         (0, 0, 16, 16), 2, 0.8, 0.1, 0.1)
-        
-        self.ambience_dist = 12*TILESIZE # makes creature noises within this distance
-        self.calm_dist = 10*TILESIZE # clams the creature after this distance
-        self.agro_dist = 6*TILESIZE # follows within this distance
-        self.attack_dist = 5*TILESIZE # initiates an attack in this distance
-
-        self.fov = 0.7
-        self.chasing = False
-
-        self.attack_cooldown_timer = CustomTimer()
-        self.chase_path_timer = CustomTimer(auto_clear=True)
-        self.chase_path_timer.start(1_000, 0)
-
-    def check_timers(self):
-
-        super().check_timers()
-        self.attack_cooldown_timer.check()
-        if self.chase_path_timer.check() and self.state in (AGRO, ATTACK):
-            try:
-                self.generate_new_path(self.master.player.hitbox.center)
-                self.chasing = True
-            except ValueError:
-                self.chasing = False
-
-    def follow_path(self):
-
-        if self.state in (AGRO, ATTACK):
-            generate_new_on_end = False
-        else: generate_new_on_end = True
-        return super().follow_path(generate_new_on_end)
-        
-    def process_events(self):
-
-        if self.state == DEAD: return
-
-        self.master.debug("State:",["IDLE", "PATH", "AGRO", "ATTACK", "ANGRY"][self.state])
-        angle = self.direction.angle_to([1, 0])
-        pygame.draw.arc(self.master.debug.surface, (108, 10, 50, 50),
-            [self.master.offset.x-self.agro_dist+self.rect.centerx, self.master.offset.y-self.agro_dist+self.rect.centery, self.agro_dist*2, self.agro_dist*2],
-            radians(angle-(1-self.fov)*90), radians(angle+(1-self.fov)*90),  self.agro_dist)
-
-        dist = dist_sq(self.master.player.rect.center, self.rect.center)
-        to_player = pygame.Vector2(self.master.player.hitbox.centerx - self.hitbox.centerx,
-            self.master.player.hitbox.centery - self.hitbox.centery)
-        try:
-            to_player.normalize_ip()
-        except ValueError: pass
-        # in_los = self.in_line_of_sight(dist, to_player)
-        # in_fov = self.direction.dot(to_player) <= self.fov
-
-        if dist > self.attack_dist**2 and self.state == ATTACK:
-            self.state = AGRO
-        elif dist <= self.attack_dist**2 and self.state == AGRO and not self.attack_cooldown_timer.running\
-          and self.direction.dot(to_player) > 0.9 \
-          and self.in_line_of_sight(dist, self.direction):    
-            self.shoot_bullet()
-            self.state = ATTACK
-            self.attack_cooldown_timer.start(2_000)
-            self.anim_index = 0
-        elif ( self.state != AGRO and 
-                self.rect.colliderect([-self.master.offset.x, -self.master.offset.y, W, H]) and # on screen
-                self.direction.dot(to_player) >= self.fov and # in field of view
-                dist <= self.agro_dist**2 and # in range
-                self.in_line_of_sight(dist, to_player)): # in line of sight
-            if self.state == PATH:
-                self.state = AGRO
-                self.chase_path_timer.start_time = pygame.time.get_ticks() - self.chase_path_timer.duration-10
-
-        if dist > self.calm_dist**2 and self.state != PATH:
-            self.chasing = False
-            self.state = PATH
-            self.generate_new_path()
-
-        if self.state in (AGRO, ATTACK) and not self.chasing:
-            self.target_direc.update(self.master.player.rect.centerx - self.rect.centerx,
-                self.master.player.rect.centery - self.rect.centery)
-            try:
-                self.target_direc.normalize_ip()
-            except ValueError: pass
-
-    def shoot_bullet(self):
-
-        direc = pygame.Vector2()
-        direc.from_polar((1, -round(self.direction.angle_to((1, 0))/15)*15))
-        Bullet(self.master, [self.master.level.player_bullets_grp], 
-               self.hitbox.center, direc, (7, 7), False, 2)
-        
     def in_line_of_sight(self, target_dist, direc=None) -> bool:
 
         ray_pos_x = self.hitbox.centerx / TILESIZE
@@ -399,6 +291,126 @@ class Guard(Enemy):
                              intersection*TILESIZE+self.master.offset)
 
         return not tile_found or (dist*TILESIZE)**2 > target_dist
+
+    def draw(self):
+
+        self.screen.blit(self.image, self.rect.topleft + self.master.offset)
+        if self.state == AGRO or (hasattr(self, "suspicion_meter") and self.suspicion_meter >= 75):
+            self.screen.blit(ALERT_SYMBOL, self.hitbox.midtop+self.master.offset+[-ALERT_SYMBOL.get_width()/2, 6*sin(pygame.time.get_ticks()/300)-self.hitbox.h])
+        elif self.state == ATTACK:
+            self.screen.blit(WARNING_SYMBOL, self.hitbox.midtop+self.master.offset+[-WARNING_SYMBOL.get_width()/2, 6*sin(pygame.time.get_ticks()/300)-self.hitbox.h])
+
+        if self.master.debug.on:
+            pygame.draw.rect(self.master.debug.surface, (24, 116, 205, 100), (self.hitbox.x+self.master.offset.x, self.hitbox.y+self.master.offset.y, self.hitbox.width, self.hitbox.height), 1)
+
+    def update(self):
+
+        if self.state != DEAD:
+            self.process_events()
+            self.follow_path()
+        self.check_timers()
+        if self.state != DEAD:
+            self.control()
+            self.apply_force()
+            self.move()
+            self.check_player_collision()
+        self.update_image()
+
+
+class Guard(Enemy):
+
+    def __init__(self, master, grps, level, sprite_type, pos):
+
+        super().__init__(master, grps, level, sprite_type, pos,
+                         (0, 0, 16, 16), 2, 0.8, 0.1, 0.1)
+        
+        self.ambience_dist = 12*TILESIZE # makes creature noises within this distance
+        self.calm_dist = 10*TILESIZE # clams the creature after this distance
+        self.agro_dist = 6*TILESIZE # follows within this distance
+        self.attack_dist = 5*TILESIZE # initiates an attack in this distance
+
+        self.fov = 0.7
+        self.chasing = False
+        self.is_guard = True
+
+        self.attack_cooldown_timer = CustomTimer()
+        self.chase_path_timer = CustomTimer(auto_clear=True)
+        self.chase_path_timer.start(1_000, 0)
+
+    def check_timers(self):
+
+        super().check_timers()
+        self.attack_cooldown_timer.check()
+        if self.chase_path_timer.check() and self.state in (AGRO, ATTACK, SUMMONED):
+            try:
+                self.generate_new_path(self.master.player.hitbox.center)
+                self.chasing = True
+            except ValueError:
+                self.chasing = False
+
+    def follow_path(self):
+
+        if self.state in (AGRO, ATTACK):
+            generate_new_on_end = False
+        else: generate_new_on_end = True
+        return super().follow_path(generate_new_on_end)
+        
+    def process_events(self):
+
+        if self.state == DEAD: return
+
+        self.master.debug("State:",["IDLE", "PATH", "AGRO", "ATTACK", "ANGRY"][self.state])
+        angle = self.direction.angle_to([1, 0])
+        pygame.draw.arc(self.master.debug.surface, (108, 10, 50, 50),
+            [self.master.offset.x-self.agro_dist+self.rect.centerx, self.master.offset.y-self.agro_dist+self.rect.centery, self.agro_dist*2, self.agro_dist*2],
+            radians(angle-(1-self.fov)*90), radians(angle+(1-self.fov)*90),  self.agro_dist)
+
+        dist = dist_sq(self.master.player.rect.center, self.rect.center)
+        to_player = pygame.Vector2(self.master.player.hitbox.centerx - self.hitbox.centerx,
+            self.master.player.hitbox.centery - self.hitbox.centery)
+        try:
+            to_player.normalize_ip()
+        except ValueError: pass
+        # in_los = self.in_line_of_sight(dist, to_player)
+        # in_fov = self.direction.dot(to_player) <= self.fov
+
+        if self.state == ATTACK and dist > self.attack_dist**2:
+            self.state = AGRO
+        elif (self.state == AGRO and dist <= self.attack_dist**2 and not self.attack_cooldown_timer.running
+          and self.direction.dot(to_player) > 0.9 # in fov
+          and self.in_line_of_sight(dist, self.direction)): # in line of sight
+            self.shoot_bullet()
+            self.state = ATTACK
+            self.attack_cooldown_timer.start(2_000)
+            self.anim_index = 0
+        elif ( self.state != AGRO and self.state != ATTACK and not self.master.player.in_disguise and
+                self.rect.colliderect([-self.master.offset.x, -self.master.offset.y, W, H]) and # on screen
+                self.direction.dot(to_player) >= self.fov and # in field of view
+                dist <= self.agro_dist**2 and # in range
+                self.in_line_of_sight(dist, to_player)): # in line of sight
+            if self.state == PATH:
+                self.state = AGRO
+                self.chase_path_timer.start_time = pygame.time.get_ticks() - self.chase_path_timer.duration-10
+
+        if dist > self.calm_dist**2 and self.state != PATH:
+            self.chasing = False
+            self.state = PATH
+            self.generate_new_path()
+
+        if self.state in (AGRO, ATTACK) and not self.chasing:
+            self.target_direc.update(self.master.player.rect.centerx - self.rect.centerx,
+                self.master.player.rect.centery - self.rect.centery)
+            try:
+                self.target_direc.normalize_ip()
+            except ValueError: pass
+
+    def shoot_bullet(self):
+
+        direc = pygame.Vector2()
+        direc.from_polar((1, -round(self.direction.angle_to((1, 0))/15)*15))
+        Bullet(self.master, [self.master.level.player_bullets_grp], 
+               self.hitbox.center, direc, (7, 7), False, 2)
+        
         
 
 class Fish(Enemy):
@@ -407,3 +419,63 @@ class Fish(Enemy):
 
         super().__init__(master, grps, level, sprite_type, pos,
                          (0, 0, 16, 16), 1, 0.5, 0.1, 0.1)
+        
+        self.player_detection_dist = round(3*TILESIZE)
+        self.player_too_close_dist = 1*TILESIZE
+        self.call_guard_dist = 10*TILESIZE
+        self.fov = 0.6
+        self.suspicion_meter = 0
+        self.react_to_player_timer = CustomTimer()
+
+    def check_timers(self):
+
+        super().check_timers()
+        self.react_to_player_timer.check()
+        
+    def process_events(self):
+
+        if self.state == DEAD: return
+        
+        angle = self.direction.angle_to([1, 0])
+        pygame.draw.arc(self.master.debug.surface, (198, 85, 50, 85),
+            [self.master.offset.x-self.player_detection_dist+self.rect.centerx, self.master.offset.y-self.player_detection_dist+self.rect.centery, self.player_detection_dist*2, self.player_detection_dist*2],
+            radians(angle-(1-self.fov)*90), radians(angle+(1-self.fov)*90),  self.player_detection_dist)
+        pygame.draw.circle(self.master.debug.surface, (108, 10, 50, 50),
+                           (self.master.offset.x+self.rect.centerx, self.master.offset.y+self.rect.centery),
+                           self.player_too_close_dist)
+
+        dist = dist_sq(self.master.player.rect.center, self.rect.center)
+        to_player = pygame.Vector2(self.master.player.hitbox.centerx - self.hitbox.centerx,
+            self.master.player.hitbox.centery - self.hitbox.centery)
+        try:
+            to_player.normalize_ip()
+        except ValueError: pass
+        
+        if (dist <= self.player_too_close_dist**2 or
+                (dist <= self.player_detection_dist**2 and self.direction.dot(to_player) >= self.fov # in fov
+                 and self.in_line_of_sight(dist, to_player))): # in los
+            diag = None
+            # TODO add random dialogues
+            if not self.react_to_player_timer.running:
+                if self.master.player.in_disguise:
+                    # Bad react
+                    self.react_to_player_timer.start(3_000)
+                    self.suspicion_meter += 25
+                    diag = self.master.dialogue_manager.create_dialogue(self, 1_800, "IMPOSTER!!!")
+                else:
+                    # cool react
+                    self.react_to_player_timer.start(4_000)
+                    self.master.dialogue_manager.create_dialogue(self, 1_800, "I see You")
+            elif self.master.player.attacking:
+                pass # TODO rect crazy
+                self.suspicion_meter = 100
+                self.master.dialogue_manager.create_dialogue(self, 1_000, "HEEEEYEYEYYEYY YPOOO")
+
+            if self.suspicion_meter >= 100:
+                if diag is not None:
+                    diag.text = "HEEEEYEYEYYEYY YPOOO"
+                for enemy in self.level.enemy_grp.sprites():
+                    if enemy is self or enemy.dead or not enemy.is_guard: continue
+                    if dist_sq(self.hitbox.center, enemy.hitbox.center) < self.call_guard_dist**2:
+                        enemy.state = AGRO
+                self.suspicion_meter = 99
