@@ -5,6 +5,7 @@ from .entity import *
 from .projectiles import Bullet
 from random import randint, choice
 from math import sin, sqrt, radians
+import json
 from pathfinding.finder.a_star import AStarFinder
 from pathfinding.core.diagonal_movement import DiagonalMovement
 
@@ -20,6 +21,7 @@ def load_enemy_sprites():
     ALERT_SYMBOL = pygame.image.load("graphics/UI/alert_symbol.png").convert_alpha()
     WARNING_SYMBOL = pygame.image.load("graphics/UI/warning_symbol.png").convert_alpha()
 
+FISH_DIALOGUES:dict[str, list[str]] = json.load(open("data/dialogues.json"))
 
 IDLE = 0
 PATH = 1
@@ -66,6 +68,7 @@ class Enemy(pygame.sprite.Sprite):
         self.hurting = False
         self.dead = False
         self.is_guard = False
+        self.suspicion_meter = 0
 
         self.path_cells = []
         self.path_cell_index = 0
@@ -295,10 +298,12 @@ class Enemy(pygame.sprite.Sprite):
     def draw(self):
 
         self.screen.blit(self.image, self.rect.topleft + self.master.offset)
-        if self.state == AGRO or (hasattr(self, "suspicion_meter") and self.suspicion_meter >= 75):
-            self.screen.blit(ALERT_SYMBOL, self.hitbox.midtop+self.master.offset+[-ALERT_SYMBOL.get_width()/2, 6*sin(pygame.time.get_ticks()/300)-self.hitbox.h])
-        elif self.state == ATTACK:
-            self.screen.blit(WARNING_SYMBOL, self.hitbox.midtop+self.master.offset+[-WARNING_SYMBOL.get_width()/2, 6*sin(pygame.time.get_ticks()/300)-self.hitbox.h])
+
+        if not self.dead:
+            if self.state == AGRO or 99 > self.suspicion_meter >= 68:
+                self.screen.blit(ALERT_SYMBOL, self.hitbox.midtop+self.master.offset+[-ALERT_SYMBOL.get_width()/2, 6*sin(pygame.time.get_ticks()/300)-self.hitbox.h])
+            elif self.state == ATTACK or self.suspicion_meter >= 99:
+                self.screen.blit(WARNING_SYMBOL, self.hitbox.midtop+self.master.offset+[-WARNING_SYMBOL.get_width()/2, 6*sin(pygame.time.get_ticks()/300)-self.hitbox.h])
 
         if self.master.debug.on:
             pygame.draw.rect(self.master.debug.surface, (24, 116, 205, 100), (self.hitbox.x+self.master.offset.x, self.hitbox.y+self.master.offset.y, self.hitbox.width, self.hitbox.height), 1)
@@ -335,12 +340,14 @@ class Guard(Enemy):
 
         self.attack_cooldown_timer = CustomTimer()
         self.chase_path_timer = CustomTimer(auto_clear=True)
+        self.summoned_timer = CustomTimer()
         self.chase_path_timer.start(1_000, 0)
 
     def check_timers(self):
 
         super().check_timers()
         self.attack_cooldown_timer.check()
+        self.summoned_timer.check()
         if self.chase_path_timer.check() and self.state in (AGRO, ATTACK, SUMMONED):
             try:
                 self.generate_new_path(self.master.player.hitbox.center)
@@ -392,7 +399,7 @@ class Guard(Enemy):
                 self.state = AGRO
                 self.chase_path_timer.start_time = pygame.time.get_ticks() - self.chase_path_timer.duration-10
 
-        if dist > self.calm_dist**2 and self.state != PATH:
+        if dist > self.calm_dist**2 and self.state != PATH and not self.summoned_timer.running:
             self.chasing = False
             self.state = PATH
             self.generate_new_path()
@@ -422,9 +429,8 @@ class Fish(Enemy):
         
         self.player_detection_dist = round(3*TILESIZE)
         self.player_too_close_dist = 1*TILESIZE
-        self.call_guard_dist = 10*TILESIZE
+        self.call_guard_dist = 14*TILESIZE
         self.fov = 0.6
-        self.suspicion_meter = 0
         self.react_to_player_timer = CustomTimer()
 
     def check_timers(self):
@@ -457,25 +463,26 @@ class Fish(Enemy):
             diag = None
             # TODO add random dialogues
             if not self.react_to_player_timer.running:
-                if self.master.player.in_disguise:
+                if self.master.player.in_disguise or self.suspicion_meter > 68:
                     # Bad react
                     self.react_to_player_timer.start(3_000)
-                    self.suspicion_meter += 25
-                    diag = self.master.dialogue_manager.create_dialogue(self, 1_800, "IMPOSTER!!!")
+                    self.suspicion_meter += 34
+                    diag = self.master.dialogue_manager.create_dialogue(self, 1_800, choice(FISH_DIALOGUES["sus_react"]))
                 else:
                     # cool react
                     self.react_to_player_timer.start(4_000)
-                    self.master.dialogue_manager.create_dialogue(self, 1_800, "I see You")
+                    self.master.dialogue_manager.create_dialogue(self, 1_800, choice(FISH_DIALOGUES["cool_react"]))
             elif self.master.player.attacking:
                 pass # TODO rect crazy
                 self.suspicion_meter = 100
-                self.master.dialogue_manager.create_dialogue(self, 1_000, "HEEEEYEYEYYEYY YPOOO")
+                diag = self.master.dialogue_manager.create_dialogue(self, 1_000, "")
 
             if self.suspicion_meter >= 100:
                 if diag is not None:
-                    diag.text = "HEEEEYEYEYYEYY YPOOO"
+                    diag.text = choice(FISH_DIALOGUES["danger_react"])
                 for enemy in self.level.enemy_grp.sprites():
                     if enemy is self or enemy.dead or not enemy.is_guard: continue
                     if dist_sq(self.hitbox.center, enemy.hitbox.center) < self.call_guard_dist**2:
                         enemy.state = AGRO
+                        enemy.summoned_timer.start(2_000)
                 self.suspicion_meter = 99

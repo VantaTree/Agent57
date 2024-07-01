@@ -1,0 +1,38 @@
+{
+    "cool_react": [
+        "Is this a robot?",
+        "That's the new AI",
+        "Howdy mate",
+        "You must love metal",
+        "What's that in you mouth",
+        "Atrificial Intelligence (0.0)",
+        "New guy?",
+        "lookin good",
+        "You are sleek",
+        "Watch where you are going",
+        "So shiny"
+    ],
+    "sus_react": [
+        "Bob?!?!?!?!?!?",
+        "Who are you!?",
+        "Are you wearing Bob?",
+        "Was that Bob?",
+        "Something's off about you",
+        "You look suspicious",
+        "Bob?! have you been taking drugs?",
+        "Have you seen Bob around?",
+        "Can't stand you",
+        "You look dead",
+        "Are you bleeding"
+    ],
+    "danger_react": [
+        "You are NOT BOB!",
+        "GUARDS!!!",
+        "HELP!!! He killed Bob",
+        "There a MURDERER!",
+        "Somebody catch HIM!",
+        "AAAAAH!",
+        "You are going straight to hell",
+        "IMPOSTER!!!"
+    ]
+}
