@@ -211,6 +211,9 @@ class PauseMenu():
         self.bg = pygame.transform.gaussian_blur(self.screen, 5, False)
         # self.master.sounds["UI_Pause"].play()
 
+    def close(self):
+        self.master.app.state = self.master.app.IN_GAME
+
     def update(self):
         
         for event in pygame.event.get((pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN)):
@@ -222,13 +225,13 @@ class PauseMenu():
                 for button in self.buttons:
                     action = button.interact(event.pos, click=True)
                     if action == 'resume':
-                        self.master.app.state = self.master.app.IN_GAME
+                        self.close()
                         # self.master.sounds["UI_Return"].play()
                     elif action == 'fullscreen':
                         pygame.display.toggle_fullscreen()
                     elif action == 'restart level':
+                        self.close()
                         # self.master.app.death_screen()
-                        self.master.game.paused = False
                         self.master.player.get_hurt()
                     elif action == 'settings':
                         self.master.settings_menu.open(bg=self.bg, bg_overlay=self.bg_overlay)

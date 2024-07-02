@@ -56,7 +56,7 @@ class Game:
         # self.camera.draw()
         self.level.draw()
         self.player.draw()
-        self.level.draw_fg()        
+        self.level.draw_fg()
 
 
 class Camera:

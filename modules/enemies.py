@@ -390,7 +390,7 @@ class Guard(Enemy):
             self.state = ATTACK
             self.attack_cooldown_timer.start(2_000)
             self.anim_index = 0
-        elif ( self.state != AGRO and self.state != ATTACK and not self.master.player.in_disguise and
+        elif ( self.state != AGRO and self.state != ATTACK and (not self.master.player.in_disguise or self.master.player.attacking) and
                 self.rect.colliderect([-self.master.offset.x, -self.master.offset.y, W, H]) and # on screen
                 self.direction.dot(to_player) >= self.fov and # in field of view
                 dist <= self.agro_dist**2 and # in range

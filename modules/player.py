@@ -64,6 +64,12 @@ class Player(pygame.sprite.Sprite):
         self.shooting_duration_timer = CustomTimer()
         self.SHOOT_COOLDOWN = 1000
 
+        self.pause_button = pygame.Surface((24, 24), pygame.SRCALPHA)
+        pygame.draw.circle(self.pause_button, (180, 180, 200, 100), (12, 12), 12)
+        p_text = self.master.font.render("P", False, (255, 255, 255))
+        self.pause_button.blit(p_text, ((self.pause_button.get_width()-p_text.get_width())/2, (self.pause_button.get_height()-p_text.get_height())/2))
+        self.pause_rect = self.pause_button.get_rect(topleft=(5, 5))
+
     def update_image(self):
 
         # if self.moving: state = "swim"
@@ -88,7 +94,6 @@ class Player(pygame.sprite.Sprite):
         # self.image = pygame.transform.rotozoom(self.image, round(self.direction.angle_to((1, 0))/15)*15, 1)
         self.image = pygame.transform.rotate(self.image, round(self.direction.angle_to((1, 0))/15)*15)
         self.rect = self.image.get_rect(center = self.hitbox.center)
-
 
     def get_input(self):
 
@@ -127,6 +132,8 @@ class Player(pygame.sprite.Sprite):
                     self.attacking = True
                     self.shooting_duration_timer.start(30)
                     self.shoot_cooldown_timer.start(self.SHOOT_COOLDOWN)
+                if event.button == 1 and self.in_control and self.pause_rect.collidepoint(event.pos):
+                    self.master.pause_menu.open()
                     
             if event.type == pygame.MOUSEBUTTONUP:
                 pass
@@ -202,6 +209,8 @@ class Player(pygame.sprite.Sprite):
         self.check_on_disguise()
         if self.can_interact:
             self.screen.blit(self.interact_symbol, self.hitbox.midtop+self.master.offset+[0, 6*sin(pygame.time.get_ticks()/300)-self.hitbox.h])
+
+        self.screen.blit(self.pause_button, self.pause_rect)
 
     def draw(self):
 
