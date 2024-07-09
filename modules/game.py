@@ -16,6 +16,7 @@ class Game:
         load_resources()
 
         self.master.offset = pygame.Vector2(0, 0)
+        self.touch_btns_enabled = True
 
         self.player = Player(master, [])
         self.camera = Camera(master)

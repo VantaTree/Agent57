@@ -1,5 +1,6 @@
 import pygame
 from .config import *
+from .engine import *
 
 
 class Button():
@@ -52,6 +53,70 @@ class Button():
             self.screen.blit(self.underline, self.underline_rect)
 
         self.screen.blit(self.image, self.rect)
+
+
+class ToggleButton:
+
+    def __init__(self, master, pos, action, button_list, length, default_value = False, color_text=(255, 255, 255), color_shadow=(105, 75, 105)):
+
+        self.master = master
+        self.screen = pygame.display.get_surface()
+        self.pos = pos
+        self.action = action
+        self.length = length
+        self.value = default_value
+
+        self.mouse_hover = False
+        self.hover_sound_played = False
+
+        self.color_text = color_text
+        self.color_shadow = color_shadow
+
+        self.image = self.master.font.render(action.upper(), False, self.color_text)
+        self.rect = self.image.get_rect(center=pos)
+        # self.detection_rect = self.rect.inflate(10,10)
+        self.rect = self.rect.inflate(length//2,0)
+        self.detection_rect = self.rect.inflate(0,0)
+
+        self.underline = pygame.Surface((self.image.get_width(), 1))
+        self.underline.fill(self.color_text)
+        # self.underline_rect = self.underline.get_rect(midtop=(self.rect.midbottom))
+
+        # self.tick = pygame.Surface((0, 0), pygame.)
+
+        self.shadow = self.master.font.render(action.upper(), False, color_shadow)
+        self.shadow.set_alpha(200)
+        
+        button_list.append(self)
+
+    def interact(self, mouse_pos, click=False):
+
+        if click and self.mouse_hover:
+            self.value = not self.value
+            return self.action
+        
+        self.mouse_hover = self.detection_rect.collidepoint(mouse_pos)
+        if self.mouse_hover:
+            if not self.hover_sound_played:
+                self.hover_sound_played = True
+                # self.master.sounds["UI_Hover"].play()
+        else:self.hover_sound_played = False
+
+    def draw(self):
+
+        if not self.mouse_hover:
+            self.screen.blit(self.shadow, (self.rect.left-2, self.rect.top+2))
+        else:
+            self.screen.blit(self.underline, (self.rect.left, self.rect.bottom))
+
+        self.screen.blit(self.image, self.rect)
+        box = pygame.Surface((self.image.get_height()//2+2, self.image.get_height()//2+2))
+        box.fill(self.color_shadow)
+        box_pos = self.rect.right-box.get_width(), self.rect.top+(self.rect.h-box.get_height())//2+2
+        self.screen.blit(box, (box_pos))
+        if self.value:
+            tick = self.master.font.render("X", False, (0, 255, 100))
+            self.screen.blit(tick, (box_pos[0]+(box.get_width()-tick.get_width())//2, box_pos[1]+(box.get_height()-tick.get_height())//2))
 
 
 class Slider:
@@ -125,6 +190,110 @@ class Slider:
         else:
             bar_filled = self.length * ((self._value-self.min_value)/(self.max_value-self.min_value))
         self.screen.fill(self.color_text, (self.detection_rect.x, self.detection_rect.y, bar_filled, self.detection_rect.height))
+
+
+class TouchButton:
+
+    def __init__(self, master, pos, image, img_alpha=200 ,text=None, text_color=(255, 255, 255), circle=False):
+
+        self.master = master
+        self.screen = pygame.display.get_surface()
+        self.mouse_hover = False
+
+        self.pos = pos
+        self.image = image
+        self.text = text
+        self.circle = circle
+        self.half_width = self.image.get_width()/2
+        self.image.set_alpha(img_alpha)
+        if text is not None:
+            self.text_color = text_color
+            self.text_srf = self.master.font.render(text, False, text_color)
+            self.image.blit(self.text_srf, ((self.image.get_width() - self.text_srf.get_width())//2,
+                                            (self.image.get_height() - self.text_srf.get_height())//2))
+        self.rect = self.image.get_rect(center=pos)
+        self.shadow_overlay:pygame.Surface = self.image.copy()
+        self.shadow_overlay.fill(0, special_flags=pygame.BLEND_RGB_MIN)
+        self.shadow_overlay.set_alpha(100)
+
+    def interact(self, click=False, always_active=False):
+
+        if not self.master.game.touch_btns_enabled and not always_active: return False
+
+        # mouse_posss = []
+        mouse_posss = [pygame.mouse.get_pos()]
+        for pos in self.master.app.fingers.values():
+            mouse_posss.append(pos)
+
+        self.mouse_hover = False
+        for mouse_pos in mouse_posss:
+            if self.circle:
+                self.mouse_hover = dist_sq(mouse_pos, self.rect.center) <= self.half_width**2
+            else:
+                self.mouse_hover = self.rect.collidepoint(mouse_pos)
+            if self.mouse_hover: break
+        if click and self.mouse_hover:
+            # self.master.sounds["click"].play()
+            return True
+
+    def draw(self):
+
+        self.screen.blit(self.image, self.rect)
+        if self.mouse_hover:
+            self.screen.blit(self.shadow_overlay, self.rect)
+
+
+class TouchJoyStick:
+
+    def __init__(self, master, pos, bg_img, joy_img, radius, img_alpha=200):
+
+        self.master = master
+        self.screen = pygame.display.get_surface()
+        self.pos = pygame.Vector2(pos)
+        self.image = bg_img
+        self.joy_image = joy_img
+        self.radius = radius
+
+        self.active = False
+        self.direction = pygame.Vector2()
+
+        self.image.set_alpha(img_alpha)
+        self.joy_image.set_alpha(img_alpha)
+        self.rect = self.image.get_rect(center=pos)
+
+        self.shadow_overlay:pygame.Surface = self.image.copy()
+        self.shadow_overlay.fill(0, special_flags=pygame.BLEND_RGB_MIN)
+        self.shadow_overlay.set_alpha(100)
+
+    def interact(self, click=False, always_active=False):
+
+        if not self.master.game.touch_btns_enabled and not always_active: return False
+
+
+        if click and dist_sq(pygame.mouse.get_pos(), self.rect.center) <= self.radius**2:
+            self.active = True
+        elif not click:
+            self.active = False
+
+        if self.active:
+            direction = (pygame.mouse.get_pos() - self.pos)
+            try:
+                self.direction = direction.normalize()
+            except ValueError:
+                self.direction = direction
+
+    def draw(self):
+
+        mx, my = pygame.mouse.get_pos()
+        dist = min (pygame.Vector2(mx - self.rect.centerx, my - self.rect.centery).magnitude(), self.radius)
+        if not self.active: dist = 0
+        
+
+        self.screen.blit(self.image, self.rect)
+        self.screen.blit(self.joy_image, (self.rect.x+self.direction.x*dist +(self.rect.w-self.joy_image.get_width())//2,
+                        self.rect.y+self.direction.y*dist +(self.rect.h-self.joy_image.get_height())//2))
+        if self.active:
+            self.screen.blit(self.shadow_overlay, self.rect)
 
 
 class MainMenu():
@@ -272,7 +441,8 @@ class SettingsMenu:
 
         col = (185, 198, 194)
         self.fps_slider = Slider(self.master, (W//2, H*0.5), "fps", self.buttons, 75, max_value=256, color_text=col, default_value=FPS)
-        Button(self.master, (W//2, H*0.6), 'back', self.buttons, col)
+        self.touch_toggle = ToggleButton(self.master, (W//2, H*0.6), "touch controls", self.buttons, 36, True, color_text=col)
+        Button(self.master, (W//2, H*0.7), 'back', self.buttons, col)
 
     def open(self, *, bg=None, bg_overlay=None, bg_color=None):
 
@@ -294,8 +464,10 @@ class SettingsMenu:
                     action = button.interact(event.pos, click=True)
                     if action == 'back':
                         # self.master.sounds["UI_Select"].play()
-                        self.master.fps = self.fps_slider.value
                         self.master.app.state = self.prev_state
+                        self.master.fps = self.fps_slider.value
+                        self.master.game.touch_btns_enabled = self.touch_toggle.value
+                        self.master.app.fingers.clear()
                     if action is not None:
                         return
 

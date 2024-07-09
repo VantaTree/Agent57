@@ -4,6 +4,7 @@ from .engine import *
 from .config import *
 from .entity import *
 from .projectiles import Bullet, load_resources
+from .menus import TouchButton, TouchJoyStick
 from math import sin, cos, pi, radians, degrees
 
 SPRITES = {}
@@ -64,11 +65,18 @@ class Player(pygame.sprite.Sprite):
         self.shooting_duration_timer = CustomTimer()
         self.SHOOT_COOLDOWN = 1000
 
-        self.pause_button = pygame.Surface((24, 24), pygame.SRCALPHA)
-        pygame.draw.circle(self.pause_button, (180, 180, 200, 100), (12, 12), 12)
-        p_text = self.master.font.render("P", False, (255, 255, 255))
-        self.pause_button.blit(p_text, ((self.pause_button.get_width()-p_text.get_width())/2, (self.pause_button.get_height()-p_text.get_height())/2))
-        self.pause_rect = self.pause_button.get_rect(topleft=(5, 5))
+        btn = pygame.Surface((24, 24), pygame.SRCALPHA)
+        pygame.draw.circle(btn, (180, 180, 200), (12, 12), 12)
+
+        self.pause_btn = TouchButton(master, (17, 17), btn.copy(), 100, "P", circle=True)
+        self.shoot_btn = TouchButton(master, (W-5-24-12, H-5-12), btn.copy(), 100, "S", circle=True)
+        self.interact_btn = TouchButton(master, (W-5-12, H-5-24-12), btn.copy(), 100, "!", circle=True)
+
+        img = pygame.Surface((30, 30), pygame.SRCALPHA)
+        pygame.draw.circle(img, (180, 180, 200), (15, 15), 15)
+        joy_img = pygame.Surface((18, 18), pygame.SRCALPHA)
+        pygame.draw.circle(joy_img, (200, 200, 220), (9, 9), 9)
+        self.move_joystick = TouchJoyStick(master, (15+5, H-15-5), img, joy_img, 15)
 
     def update_image(self):
 
@@ -97,16 +105,30 @@ class Player(pygame.sprite.Sprite):
 
     def get_input(self):
 
-        direction =  pygame.mouse.get_pos() - self.master.offset - self.hitbox.center
-        try:
-            self.direction = direction.normalize()
-        except ValueError:
-            self.direction = direction
+        mouse_pos = pygame.mouse.get_pos()
+        mouse_pressed = pygame.mouse.get_pressed()[0]
+
+        # if mouse_pressed and (self.pause_btn.interact(mouse_pressed) or
+        #       self.shoot_btn.interact(mouse_pressed) or
+        #           self.interact_btn.interact(mouse_pressed)):
+        #     self.moving = False
+        #     return
+        if self.master.game.touch_btns_enabled:
+            self.move_joystick.interact(mouse_pressed)
+            if self.move_joystick.active:
+                self.direction = self.move_joystick.direction
+            self.moving = self.move_joystick.active
+        else:
+            direction =  mouse_pos - self.master.offset - self.hitbox.center
+            self.moving = mouse_pressed
+
+            try:
+                self.direction = direction.normalize()
+            except ValueError:
+                self.direction = direction
         
-        self.moving = pygame.mouse.get_pressed()[0]
 
     def apply_force(self):
-
 
         if self.moving:
             speed = self.disguise_speed if self.in_disguise else self.max_speed
@@ -127,13 +149,11 @@ class Player(pygame.sprite.Sprite):
         for event in pygame.event.get((pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN)):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 3 and not self.shoot_cooldown_timer.running and self.in_control\
-                    and self.bullets > 0:
+                        and self.bullets > 0:
                     self.spawn_bullet()
                     self.attacking = True
                     self.shooting_duration_timer.start(30)
                     self.shoot_cooldown_timer.start(self.SHOOT_COOLDOWN)
-                if event.button == 1 and self.in_control and self.pause_rect.collidepoint(event.pos):
-                    self.master.pause_menu.open()
                     
             if event.type == pygame.MOUSEBUTTONUP:
                 pass
@@ -151,6 +171,19 @@ class Player(pygame.sprite.Sprite):
                 #     self.flashlight = not self.flashlight
                 if event.key == pygame.K_h:
                     self.get_hurt()
+
+        mouse_pressed = pygame.mouse.get_pressed()[0]
+        if self.in_control:
+            if self.pause_btn.interact(mouse_pressed, True):
+                self.master.pause_menu.open()
+            elif self.shoot_btn.interact(mouse_pressed) and not self.shoot_cooldown_timer.running and self.bullets > 0:
+                self.spawn_bullet()
+                self.attacking = True
+                self.shooting_duration_timer.start(30)
+                self.shoot_cooldown_timer.start(self.SHOOT_COOLDOWN)
+            elif self.interact_btn.interact(mouse_pressed):
+                self.check_level_finish(True)
+                self.check_on_disguise(True)
 
         self.shoot_cooldown_timer.check()
         if self.dying_timer.check():
@@ -210,7 +243,11 @@ class Player(pygame.sprite.Sprite):
         if self.can_interact:
             self.screen.blit(self.interact_symbol, self.hitbox.midtop+self.master.offset+[0, 6*sin(pygame.time.get_ticks()/300)-self.hitbox.h])
 
-        self.screen.blit(self.pause_button, self.pause_rect)
+        if self.master.game.touch_btns_enabled:
+            self.shoot_btn.draw()
+            self.interact_btn.draw()
+            self.move_joystick.draw()
+        self.pause_btn.draw()
 
     def draw(self):
 

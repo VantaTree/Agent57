@@ -45,7 +45,8 @@ class App:
         self.clock = pygame.time.Clock()
         pygame.event.set_blocked(None)
         pygame.event.set_allowed((pygame.QUIT, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP,
-                                    pygame.KEYDOWN, pygame.KEYUP))
+                                    pygame.KEYDOWN, pygame.KEYUP, pygame.FINGERDOWN,
+                                    pygame.FINGERUP, pygame.FINGERMOTION))
 
         self.state = self.MAIN_MENU
 
@@ -61,6 +62,9 @@ class App:
 
         # SoundSet(self.master)
         # Music(self.master)
+
+        self.fingers = {}
+        self.fingers_prev = {}
 
     async def run(self):
         
@@ -81,6 +85,19 @@ class App:
                     raise SystemExit
 
             await asyncio.sleep(0)
+
+            self.fingers_prev = self.fingers.copy()
+            for event in pygame.event.get((pygame.FINGERDOWN, pygame.FINGERUP, pygame.FINGERMOTION)):
+                if not self.game.touch_btns_enabled: continue
+
+                if event.type == pygame.FINGERDOWN:
+                    self.fingers[event.finger_id] = (event.x*W, event.y*H)
+                if event.type == pygame.FINGERMOTION:
+                    self.fingers[event.finger_id] = (event.x*W, event.y*H)
+                if event.type == pygame.FINGERUP:
+                    try:
+                        del self.fingers[event.finger_id]
+                    except KeyError: pass
 
             # self.master.music.run()
             self.run_states()
