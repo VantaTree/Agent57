@@ -72,11 +72,12 @@ class Player(pygame.sprite.Sprite):
         self.shoot_btn = TouchButton(master, (W-5-24-12, H-5-12), btn.copy(), 100, "S", circle=True)
         self.interact_btn = TouchButton(master, (W-5-12, H-5-24-12), btn.copy(), 100, "!", circle=True)
 
-        img = pygame.Surface((30, 30), pygame.SRCALPHA)
-        pygame.draw.circle(img, (180, 180, 200), (15, 15), 15)
-        joy_img = pygame.Surface((18, 18), pygame.SRCALPHA)
-        pygame.draw.circle(joy_img, (200, 200, 220), (9, 9), 9)
-        self.move_joystick = TouchJoyStick(master, (15+5, H-15-5), img, joy_img, 15)
+        ra, ri = 17, 9
+        img = pygame.Surface((ra*2, ra*2), pygame.SRCALPHA)
+        pygame.draw.circle(img, (180, 180, 200), (ra, ra), ra)
+        joy_img = pygame.Surface((ri*2, ri*2), pygame.SRCALPHA)
+        pygame.draw.circle(joy_img, (200, 200, 220), (ri, ri), ri)
+        self.move_joystick = TouchJoyStick(master, (ra+5, H-ra-5), img, joy_img, ra)
 
     def update_image(self):
 
@@ -146,6 +147,8 @@ class Player(pygame.sprite.Sprite):
 
     def process_events(self):
 
+        mouse_btn1_just_down = False
+
         for event in pygame.event.get((pygame.MOUSEBUTTONUP, pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN)):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 3 and not self.shoot_cooldown_timer.running and self.in_control\
@@ -154,6 +157,8 @@ class Player(pygame.sprite.Sprite):
                     self.attacking = True
                     self.shooting_duration_timer.start(30)
                     self.shoot_cooldown_timer.start(self.SHOOT_COOLDOWN)
+                if event.button == 1:
+                    mouse_btn1_just_down = True
                     
             if event.type == pygame.MOUSEBUTTONUP:
                 pass
@@ -174,14 +179,15 @@ class Player(pygame.sprite.Sprite):
 
         mouse_pressed = pygame.mouse.get_pressed()[0]
         if self.in_control:
-            if self.pause_btn.interact(mouse_pressed, True):
+            if self.pause_btn.interact(mouse_pressed, True, mouse_btn1_just_down):
                 self.master.pause_menu.open()
-            elif self.shoot_btn.interact(mouse_pressed) and not self.shoot_cooldown_timer.running and self.bullets > 0:
+            elif self.shoot_btn.interact(mouse_pressed,just_pressed=mouse_btn1_just_down) and \
+                not self.shoot_cooldown_timer.running and self.bullets > 0:
                 self.spawn_bullet()
                 self.attacking = True
                 self.shooting_duration_timer.start(30)
                 self.shoot_cooldown_timer.start(self.SHOOT_COOLDOWN)
-            elif self.interact_btn.interact(mouse_pressed):
+            elif self.interact_btn.interact(mouse_pressed, just_pressed=mouse_btn1_just_down):
                 self.check_level_finish(True)
                 self.check_on_disguise(True)
 

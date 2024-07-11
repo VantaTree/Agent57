@@ -32,13 +32,14 @@ class Button():
 
     def interact(self, mouse_pos, click=False):
 
+        self.mouse_hover = self.detection_rect.collidepoint(mouse_pos)
+        
         if click and self.mouse_hover:
             if self.action not in ("start", "resume"):
                 pass
                 # self.master.sounds["UI_Select"].play()
-
             return self.action
-        self.mouse_hover = self.detection_rect.collidepoint(mouse_pos)
+        
         if self.mouse_hover:
             if not self.hover_sound_played:
                 self.hover_sound_played = True
@@ -73,16 +74,19 @@ class ToggleButton:
         self.color_shadow = color_shadow
 
         self.image = self.master.font.render(action.upper(), False, self.color_text)
-        self.rect = self.image.get_rect(center=pos)
-        # self.detection_rect = self.rect.inflate(10,10)
-        self.rect = self.rect.inflate(length//2,0)
+        extra_l = max(self.image.get_height()//2+2, length-self.image.get_width())
+        self.rect = pygame.Rect(0, 0, self.image.get_width()+extra_l, self.image.get_height())
+        self.rect.center = pos
         self.detection_rect = self.rect.inflate(0,0)
 
         self.underline = pygame.Surface((self.image.get_width(), 1))
         self.underline.fill(self.color_text)
         # self.underline_rect = self.underline.get_rect(midtop=(self.rect.midbottom))
 
-        # self.tick = pygame.Surface((0, 0), pygame.)
+        self.box = pygame.Surface((self.image.get_height()//2+2, self.image.get_height()//2+2))
+        self.box.fill(self.color_shadow)
+        self.box_pos = self.rect.right-self.box.get_width(), self.rect.top+(self.rect.h-self.box.get_height())//2+2
+        self.tick = self.master.font.render("X", False, (0, 255, 100))
 
         self.shadow = self.master.font.render(action.upper(), False, color_shadow)
         self.shadow.set_alpha(200)
@@ -91,11 +95,12 @@ class ToggleButton:
 
     def interact(self, mouse_pos, click=False):
 
+        self.mouse_hover = self.detection_rect.collidepoint(mouse_pos)
+
         if click and self.mouse_hover:
             self.value = not self.value
             return self.action
         
-        self.mouse_hover = self.detection_rect.collidepoint(mouse_pos)
         if self.mouse_hover:
             if not self.hover_sound_played:
                 self.hover_sound_played = True
@@ -110,13 +115,10 @@ class ToggleButton:
             self.screen.blit(self.underline, (self.rect.left, self.rect.bottom))
 
         self.screen.blit(self.image, self.rect)
-        box = pygame.Surface((self.image.get_height()//2+2, self.image.get_height()//2+2))
-        box.fill(self.color_shadow)
-        box_pos = self.rect.right-box.get_width(), self.rect.top+(self.rect.h-box.get_height())//2+2
-        self.screen.blit(box, (box_pos))
+        self.screen.blit(self.box, self.box_pos)
         if self.value:
-            tick = self.master.font.render("X", False, (0, 255, 100))
-            self.screen.blit(tick, (box_pos[0]+(box.get_width()-tick.get_width())//2, box_pos[1]+(box.get_height()-tick.get_height())//2))
+            self.screen.blit(self.tick, (self.box_pos[0]+(self.box.get_width()-self.tick.get_width())//2,
+                                         self.box_pos[1]+(self.box.get_height()-self.tick.get_height())//2))
 
 
 class Slider:
@@ -216,14 +218,17 @@ class TouchButton:
         self.shadow_overlay.fill(0, special_flags=pygame.BLEND_RGB_MIN)
         self.shadow_overlay.set_alpha(100)
 
-    def interact(self, click=False, always_active=False):
+    def interact(self, click=False, always_active=False, just_pressed=None):
 
         if not self.master.game.touch_btns_enabled and not always_active: return False
 
         # mouse_posss = []
-        mouse_posss = [pygame.mouse.get_pos()]
-        for pos in self.master.app.fingers.values():
-            mouse_posss.append(pos)
+        mouse_posss = []
+        if just_pressed is not False:
+            mouse_posss.append(pygame.mouse.get_pos())
+        for f_id, pos in self.master.app.fingers.items():
+            if just_pressed is not None and f_id not in self.master.app.fingers_prev:
+                mouse_posss.append(pos)
 
         self.mouse_hover = False
         for mouse_pos in mouse_posss:
@@ -440,9 +445,10 @@ class SettingsMenu:
     def create_buttons(self):
 
         col = (185, 198, 194)
-        self.fps_slider = Slider(self.master, (W//2, H*0.5), "fps", self.buttons, 75, max_value=256, color_text=col, default_value=FPS)
-        self.touch_toggle = ToggleButton(self.master, (W//2, H*0.6), "touch controls", self.buttons, 36, True, color_text=col)
-        Button(self.master, (W//2, H*0.7), 'back', self.buttons, col)
+        self.fps_slider = Slider(self.master, (W//2, H*0.44), "fps", self.buttons, 75, max_value=256, color_text=col, default_value=FPS)
+        self.touch_toggle = ToggleButton(self.master, (W//2, H*0.56), "touch controls", self.buttons, 100, True, color_text=col)
+        self.debug_toggle = ToggleButton(self.master, (W//2, H*0.68), "debug info", self.buttons, 100, True, color_text=col)
+        Button(self.master, (W//2, H*0.80), 'back', self.buttons, col)
 
     def open(self, *, bg=None, bg_overlay=None, bg_color=None):
 
@@ -452,23 +458,28 @@ class SettingsMenu:
         self.bg_overlay = bg_overlay
         self.bg_color = bg_color
 
+        self.touch_toggle.value = self.master.game.touch_btns_enabled
+        self.debug_toggle.value = self.master.debug.on
+
+    def close(self):
+        # self.master.sounds["UI_Select"].play()
+        self.master.app.state = self.prev_state
+        self.master.fps = self.fps_slider.value
+        self.master.game.touch_btns_enabled = self.touch_toggle.value
+        self.master.debug.on = self.debug_toggle.value
+        self.master.app.fingers.clear()
+
     def update(self):
 
         for event in pygame.event.get((pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN)):
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                self.master.app.state = self.prev_state
-                # self.master.sounds["UI_Return"].play()
+                self.close()
                 return
             if event.type == pygame.MOUSEBUTTONDOWN and event.button==1:
                 for button in self.buttons:
                     action = button.interact(event.pos, click=True)
                     if action == 'back':
-                        # self.master.sounds["UI_Select"].play()
-                        self.master.app.state = self.prev_state
-                        self.master.fps = self.fps_slider.value
-                        self.master.game.touch_btns_enabled = self.touch_toggle.value
-                        self.master.app.fingers.clear()
-                    if action is not None:
+                        self.close()
                         return
 
     def draw(self):
