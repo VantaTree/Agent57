@@ -317,10 +317,14 @@ class MainMenu():
     def create_buttons(self):
 
         col = (185, 198, 194)
-        Button(self.master, (W//2, H*0.37), 'start', self.buttons, col)
-        Button(self.master, (W//2, H*0.49), 'fullscreen', self.buttons, col)
-        Button(self.master, (W//2, H*0.61), 'settings', self.buttons, col)
-        Button(self.master, (W//2, H*0.73), 'quit', self.buttons, col)
+        def gen_spacing(start=0.46, space=0.12, amount=100):
+            for i in range(amount):
+                yield start + i*space
+        spacer = gen_spacing()
+        Button(self.master, (W//2, H*next(spacer)), 'start', self.buttons, col)
+        # Button(self.master, (W//2, H*next(spacer)), 'fullscreen', self.buttons, col)
+        Button(self.master, (W//2, H*next(spacer)), 'settings', self.buttons, col)
+        Button(self.master, (W//2, H*next(spacer)), 'quit', self.buttons, col)
 
     def update(self):
 
@@ -332,8 +336,8 @@ class MainMenu():
                         # self.master.music.change_track("in_game")
                         # self.master.sounds["UI_Select"].play()
                         self.master.app.state = self.master.app.INTRO_CUTSCENE
-                    elif action == 'fullscreen':
-                        pygame.display.toggle_fullscreen()
+                    # elif action == 'fullscreen':
+                    #     pygame.display.toggle_fullscreen()
                     elif action == 'settings':
                         self.master.settings_menu.open(bg_color=0)
                     elif action == 'quit':
@@ -374,11 +378,15 @@ class PauseMenu():
     def create_buttons(self):
 
         col = (185, 198, 194)
-        Button(self.master, (W//2, H*0.26), 'resume', self.buttons, col)
-        Button(self.master, (W//2, H*0.38), 'fullscreen', self.buttons, col)
-        Button(self.master, (W//2, H*0.5), 'restart level', self.buttons, col)
-        Button(self.master, (W//2, H*0.62), 'settings', self.buttons, col)
-        Button(self.master, (W//2, H*0.74), 'quit', self.buttons, col)
+        def gen_spacing(start=0.36, space=0.12, amount=100):
+            for i in range(amount):
+                yield start + i*space
+        spacer = gen_spacing()
+        Button(self.master, (W//2, H*next(spacer)), 'resume', self.buttons, col)
+        # Button(self.master, (W//2, H*next(spacer)), 'fullscreen', self.buttons, col)
+        Button(self.master, (W//2, H*next(spacer)), 'restart level', self.buttons, col)
+        Button(self.master, (W//2, H*next(spacer)), 'settings', self.buttons, col)
+        Button(self.master, (W//2, H*next(spacer)), 'quit', self.buttons, col)
 
     def open(self):
         self.master.app.state = self.master.app.PAUSE
@@ -401,8 +409,8 @@ class PauseMenu():
                     if action == 'resume':
                         self.close()
                         # self.master.sounds["UI_Return"].play()
-                    elif action == 'fullscreen':
-                        pygame.display.toggle_fullscreen()
+                    # elif action == 'fullscreen':
+                    #     pygame.display.toggle_fullscreen()
                     elif action == 'restart level':
                         self.close()
                         # self.master.app.death_screen()
@@ -445,10 +453,15 @@ class SettingsMenu:
     def create_buttons(self):
 
         col = (185, 198, 194)
-        self.fps_slider = Slider(self.master, (W//2, H*0.44), "fps", self.buttons, 75, max_value=256, color_text=col, default_value=FPS)
-        self.touch_toggle = ToggleButton(self.master, (W//2, H*0.56), "touch controls", self.buttons, 100, True, color_text=col)
-        self.debug_toggle = ToggleButton(self.master, (W//2, H*0.68), "debug info", self.buttons, 100, True, color_text=col)
-        Button(self.master, (W//2, H*0.80), 'back', self.buttons, col)
+        def gen_spacing(start=0.40, space=0.12, amount=100):
+            for i in range(amount):
+                yield start + i*space
+        spacer = gen_spacing()
+        self.fps_slider = Slider(self.master, (W//2, H*next(spacer)), "fps", self.buttons, 75, max_value=256, color_text=col, default_value=FPS)
+        self.touch_toggle = ToggleButton(self.master, (W//2, H*next(spacer)), "touch controls", self.buttons, 100, True, color_text=col)
+        self.debug_toggle = ToggleButton(self.master, (W//2, H*next(spacer)), "debug info", self.buttons, 100, True, color_text=col)
+        Button(self.master, (W//2, H*next(spacer)), 'fullscreen', self.buttons, col)
+        Button(self.master, (W//2, H*next(spacer)), 'back', self.buttons, col)
 
     def open(self, *, bg=None, bg_overlay=None, bg_color=None):
 
@@ -481,6 +494,8 @@ class SettingsMenu:
                     if action == 'back':
                         self.close()
                         return
+                    elif action == 'fullscreen':
+                        pygame.display.toggle_fullscreen()
 
     def draw(self):
 

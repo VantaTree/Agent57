@@ -5,9 +5,7 @@ from .enemies import Guard, Fish, load_enemy_sprites
 from .dialogue import DialogueManager, load_dialogue_sprites
 from pytmx.util_pygame import load_pygame
 import json
-from copy import deepcopy
 from pathfinding.core.grid import Grid as PathGrid
-from math import sin, pi
 from random import randint, choice, random
 
 def load_resources():
